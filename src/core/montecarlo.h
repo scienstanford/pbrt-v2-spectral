@@ -243,7 +243,7 @@ int LDPixelSampleFloatsNeeded(const Sample *sample, int nPixelSamples);
 void LDPixelSample(int xPos, int yPos, float shutterOpen,
     float shutterClose, int nPixelSamples, Sample *samples, float *buf, RNG &rng);
 Vector SampleHG(const Vector &w, float g, float u1, float u2);
-float HGPdf(const Vector &w, const Vector &wp, float g);
+Spectrum HGPdf(const Vector &w, const Vector &wp, float g);
 
 // Monte Carlo Inline Functions
 inline float BalanceHeuristic(int nf, float fPdf, int ng, float gPdf) {

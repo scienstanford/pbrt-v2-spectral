@@ -50,6 +50,9 @@
 // Ben
 #include "film/image.h"
 #include "film/spectralImageNoCamera.h"
+// Trisha
+#include "volumes/water.h"
+
 
 #include "filters/box.h"
 #include "filters/gaussian.h"
@@ -527,6 +530,8 @@ VolumeRegion *MakeVolumeRegion(const string &name,
         vr = CreateGridVolumeRegion(volume2world, paramSet);
     else if (name == "exponential")
         vr = CreateExponentialVolumeRegion(volume2world, paramSet);
+    else if(name == "water") // Added by Trisha for underwater rendering
+        vr = CreateWaterVolumeDensity(volume2world,paramSet);
     else
         Warning("Volume region \"%s\" unknown.", name.c_str());
     paramSet.ReportUnused();

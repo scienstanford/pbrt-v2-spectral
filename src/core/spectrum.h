@@ -32,6 +32,9 @@
 #include "pbrt.h"
 #include "parallel.h"
 
+// Trisha addition for debugging purposes.
+#include <iostream>
+
 // Spectrum Utility Declarations
 // 32 spectrum bands allows even division of 2^n samples
 // center each band on round multiple of 10: 400, 410, 420, ... , 710
@@ -365,6 +368,48 @@ public:
         }
     }
 //
+    
+    //Trisha Added (6-2016)
+    // This is useful for debugging.
+    void PrintSpectrum() const{
+        for (int i = 0; i < nSpectralSamples; ++i){
+            std::cout << c[i] << std::endl;
+        }
+    }
+    //
+  
+    //
+    //Trisha Added (6-2016)
+    // Get the value in the spectrum at a specific wavelength.
+    void GetSpectrumAtWavelength(float wavelength, float *output){
+        
+        float w0; float w1; float t;
+        float step = (sampledLambdaEnd - sampledLambdaStart)/nSpectralSamples;
+        *output = 0;
+        
+        for(int i = 0; i < nSpectralSamples; i++){
+            w0 = sampledLambdaStart + i*step;
+            w1 = sampledLambdaStart + (i+1)*step;
+            
+            if ((wavelength > w0) && (wavelength <= w1)){
+                t = (wavelength - w0)/(w1-w0);
+                *output = Lerp(t, c[i], c[i+1]);
+//                std::cout << "w0 = " << w0 << std::endl;
+//                std::cout << "w1 = " << w1 << std::endl;
+//                std::cout << "t = " << t << std::endl;
+//                std::cout << "c[i] = " << c[i] << std::endl;
+//                std::cout << "c[i+1] = " << c[i+1] << std::endl;
+//                std::cout << "output = " << &output << std::endl;
+                return;
+            }
+        }
+        
+        // Make sure we don't return 0. If we do, then we get NaN's!
+        Assert(&output != 0);
+        return;
+    }
+    //
+    
     float y() const {
         float yy = 0.f;
         for (int i = 0; i < nSpectralSamples; ++i)

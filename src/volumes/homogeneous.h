@@ -63,7 +63,7 @@ public:
     Spectrum Lve(const Point &p, const Vector &, float) const {
         return extent.Inside(WorldToVolume(p)) ? le : 0.;
     }
-    float p(const Point &p, const Vector &wi, const Vector &wo, float) const {
+    Spectrum p(const Point &p, const Vector &wi, const Vector &wo, float) const {
         if (!extent.Inside(WorldToVolume(p))) return 0.;
         return PhaseHG(wi, wo, g);
     }

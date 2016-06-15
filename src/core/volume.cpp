@@ -116,37 +116,37 @@ static float RdToAlphap(float reflectance, float A) {
 
 
 // Volume Scattering Definitions
-float PhaseIsotropic(const Vector &, const Vector &) {
+Spectrum PhaseIsotropic(const Vector &, const Vector &) {
     return 1.f / (4.f * M_PI);
 }
 
 
-float PhaseRayleigh(const Vector &w, const Vector &wp) {
+Spectrum PhaseRayleigh(const Vector &w, const Vector &wp) {
     float costheta = Dot(w, wp);
     return  3.f/(16.f*M_PI) * (1 + costheta * costheta);
 }
 
 
-float PhaseMieHazy(const Vector &w, const Vector &wp) {
+Spectrum PhaseMieHazy(const Vector &w, const Vector &wp) {
     float costheta = Dot(w, wp);
     return (0.5f + 4.5f * powf(0.5 * (1.f + costheta), 8.f)) / (4.f*M_PI);
 }
 
 
-float PhaseMieMurky(const Vector &w, const Vector &wp) {
+Spectrum PhaseMieMurky(const Vector &w, const Vector &wp) {
     float costheta = Dot(w, wp);
     return (0.5f + 16.5f * powf(0.5 * (1.f + costheta), 32.f)) / (4.f*M_PI);
 }
 
 
-float PhaseHG(const Vector &w, const Vector &wp, float g) {
+Spectrum PhaseHG(const Vector &w, const Vector &wp, float g) {
     float costheta = Dot(w, wp);
     return 1.f / (4.f * M_PI) *
         (1.f - g*g) / powf(1.f + g*g - 2.f * g * costheta, 1.5f);
 }
 
 
-float PhaseSchlick(const Vector &w, const Vector &wp, float g) {
+Spectrum PhaseSchlick(const Vector &w, const Vector &wp, float g) {
     // improved g->k mapping derived by Thies Heidecke
     // see http://pbrt.org/bugtracker/view.php?id=102
     float alpha = 1.5f;
@@ -199,9 +199,9 @@ Spectrum AggregateVolume::Lve(const Point &p, const Vector &w, float time) const
 }
 
 
-float AggregateVolume::p(const Point &p, const Vector &w, const Vector &wp,
+Spectrum AggregateVolume::p(const Point &p, const Vector &w, const Vector &wp,
         float time) const {
-    float ph = 0, sumWt = 0;
+    Spectrum ph = 0, sumWt = 0;
     for (uint32_t i = 0; i < regions.size(); ++i) {
         float wt = regions[i]->sigma_s(p, w, time).y();
         sumWt += wt;

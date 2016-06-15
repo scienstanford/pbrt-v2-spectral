@@ -35,13 +35,15 @@
 #include "transform.h"
 #include "integrator.h"
 
+// Note: Tlian changed all phase functions to be wavelength-dependent by returning spectrum.
+
 // Volume Scattering Declarations
-float PhaseIsotropic(const Vector &w, const Vector &wp);
-float PhaseRayleigh(const Vector &w, const Vector &wp);
-float PhaseMieHazy(const Vector &w, const Vector &wp);
-float PhaseMieMurky(const Vector &w, const Vector &wp);
-float PhaseHG(const Vector &w, const Vector &wp, float g);
-float PhaseSchlick(const Vector &w, const Vector &wp, float g);
+Spectrum PhaseIsotropic(const Vector &w, const Vector &wp);
+Spectrum PhaseRayleigh(const Vector &w, const Vector &wp);
+Spectrum PhaseMieHazy(const Vector &w, const Vector &wp);
+Spectrum PhaseMieMurky(const Vector &w, const Vector &wp);
+Spectrum PhaseHG(const Vector &w, const Vector &wp, float g);
+Spectrum PhaseSchlick(const Vector &w, const Vector &wp, float g);
 class VolumeRegion {
 public:
     // VolumeRegion Interface
@@ -54,7 +56,7 @@ public:
                              float time) const = 0;
     virtual Spectrum Lve(const Point &, const Vector &,
                          float time) const = 0;
-    virtual float p(const Point &, const Vector &,
+    virtual Spectrum p(const Point &, const Vector &,
                     const Vector &, float time) const = 0;
     virtual Spectrum sigma_t(const Point &p, const Vector &wo, float time) const;
     virtual Spectrum tau(const Ray &ray, float step = 1.f,
@@ -82,7 +84,7 @@ public:
     Spectrum Lve(const Point &p, const Vector &, float) const {
         return Density(WorldToVolume(p)) * le;
     }
-    float p(const Point &p, const Vector &w, const Vector &wp, float) const {
+    Spectrum p(const Point &p, const Vector &w, const Vector &wp, float) const {
         return PhaseHG(w, wp, g);
     }
     Spectrum tau(const Ray &r, float stepSize, float offset) const;
@@ -104,7 +106,7 @@ public:
     Spectrum sigma_a(const Point &, const Vector &, float) const;
     Spectrum sigma_s(const Point &, const Vector &, float) const;
     Spectrum Lve(const Point &, const Vector &, float) const;
-    float p(const Point &, const Vector &, const Vector &, float) const;
+    Spectrum p(const Point &, const Vector &, const Vector &, float) const;
     Spectrum sigma_t(const Point &, const Vector &, float) const;
     Spectrum tau(const Ray &ray, float, float) const;
 private:

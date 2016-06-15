@@ -429,7 +429,7 @@ Vector SampleHG(const Vector &w, float g, float u1, float u2) {
 }
 
 
-float HGPdf(const Vector &w, const Vector &wp, float g) {
+Spectrum HGPdf(const Vector &w, const Vector &wp, float g) {
     return PhaseHG(w, wp, g);
 }
 
