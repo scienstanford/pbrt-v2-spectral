@@ -25,7 +25,7 @@
 #include "../vdb.h"
 //#include <gsl/gsl_sf_bessel.h>
 //#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
+//#include <gsl/gsl_randist.h>
 
 using namespace std;
 
@@ -64,9 +64,11 @@ RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &par
 	   
 
 	   //float focallength = params.FindOneFloat("focal_length", 50.0);  //andy: this is wrong... put this in the file for the lens
-
-	   assert(hither != -1 && yon != -1 && shutteropen != -1 &&
-	      shutterclose != -1 && filmdistance!= -1);
+    
+        // I'm not sure what the purpose of this is, since hither and yon are usually -1
+//	   assert(hither != -1 && yon != -1 && shutteropen != -1 &&
+//	      shutterclose != -1 && filmdistance!= -1);
+    
 	   if (specfile == "") {
 	       Severe( "No lens spec file supplied!\n" );
 	   }
@@ -339,8 +341,11 @@ void RealisticDiffractionCamera::applySnellsLaw(float n1, float n2, float lensRa
         normalVec = -normalVec;
 
     float radicand = 1 - (n1/n2) * (n1/n2) * Dot(Cross(normalVec, s1), Cross(normalVec, s1));
-    if (radicand < 0)
-        ray->d = Vector(0, 0,0); //return 0;   //reflection, no refraction - might want to change for lens flare!
+    if (radicand < 0){
+        ray->d = Vector(0, 0,0);
+        // Tlian: I put this return back in so the assert doesn't catch.
+        return;   //reflection, no refraction - might want to change for lens flare!
+    }
 
     Vector s2 = n1/n2 * (Cross(normalVec, Cross(-1 * normalVec, s1))) - normalVec * sqrt(radicand);
     //ray->d = normalVec;
@@ -390,67 +395,6 @@ bool RealisticDiffractionCamera::IntersectLensEl(const Ray &r, float *tHit, floa
     phi = atan2f(phit.y, phit.x);
     if (phi < 0.) phi += 2.f*M_PI;
     
-//std::cout << "got here2!";
-    // Test sphere intersection against clipping parameters
-    //we don't need this test for now -> assume lens is within clipping parameters
-//    if ((zmin > -radius && phit.z < zmin) ||
-//        (zmax <  radius && phit.z > zmax) || phi > phiMax) {
-//        if (thit == t1) return false;
-//        if (t1 > ray.maxt) return false;
-//        thit = t1;
-        // Compute sphere hit position and $\phi$
-//        phit = ray(thit);
-//        if (phit.x == 0.f && phit.y == 0.f) phit.x = 1e-5f * radius;
-//        phi = atan2f(phit.y, phit.x);
-//        if (phi < 0.) phi += 2.f*M_PI;
- //       if ((zmin > -radius && phit.z < zmin) ||
- //           (zmax <  radius && phit.z > zmax) || phi > phiMax)
- //           return false;
- //   }
-
-/*
-    // Find parametric representation of sphere hit
-    float u = phi / phiMax;
-    float theta = acosf(Clamp(phit.z / radius, -1.f, 1.f));
-    float v = (theta - thetaMin) / (thetaMax - thetaMin);
-
-    // Compute sphere $\dpdu$ and $\dpdv$
-    float zradius = sqrtf(phit.x*phit.x + phit.y*phit.y);
-    float invzradius = 1.f / zradius;
-    float cosphi = phit.x * invzradius;
-    float sinphi = phit.y * invzradius;
-    Vector dpdu(-phiMax * phit.y, phiMax * phit.x, 0);
-    Vector dpdv = (thetaMax-thetaMin) *
-        Vector(phit.z * cosphi, phit.z * sinphi,
-               -radius * sinf(theta));
-
-    // Compute sphere $\dndu$ and $\dndv$
-    Vector d2Pduu = -phiMax * phiMax * Vector(phit.x, phit.y, 0);
-    Vector d2Pduv = (thetaMax - thetaMin) * phit.z * phiMax *
-                    Vector(-sinphi, cosphi, 0.);
-    Vector d2Pdvv = -(thetaMax - thetaMin) * (thetaMax - thetaMin) *
-                    Vector(phit.x, phit.y, phit.z);
-
-    // Compute coefficients for fundamental forms
-    float E = Dot(dpdu, dpdu);
-    float F = Dot(dpdu, dpdv);
-    float G = Dot(dpdv, dpdv);
-    Vector N = Normalize(Cross(dpdu, dpdv));
-    float e = Dot(N, d2Pduu);
-    float f = Dot(N, d2Pduv);
-    float g = Dot(N, d2Pdvv);
-
-    // Compute $\dndu$ and $\dndv$ from fundamental form coefficients
-    float invEGF2 = 1.f / (E*G - F*F);
-    Normal dndu = Normal((f*F - e*G) * invEGF2 * dpdu +
-                         (e*F - f*E) * invEGF2 * dpdv);
-    Normal dndv = Normal((g*F - f*G) * invEGF2 * dpdu +
-                         (f*F - g*E) * invEGF2 * dpdv);*/
-
-    // Initialize _DifferentialGeometry_ from parametric information
-    //const Transform &o2w = *ObjectToWorld;
-    //*dg = DifferentialGeometry(o2w(phit), o2w(dpdu), o2w(dpdv),
-      //                         o2w(dndu), o2w(dndv), u, v, this);
 
     // Update _tHit_ for quadric intersection
     *tHit = thit;
@@ -1037,8 +981,13 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
 
             float noiseA = (float)(*x);
             float noiseB = (float)(*y);
-
-             //project the original ray onto the new bases         
+            
+//            std::cout << "ray->d.x = " << ray->d.x << std::endl;
+//            std::cout << "ray->d.y = " << ray->d.y << std::endl;
+//            std::cout << "ray->d.z = " << ray->d.z << std::endl;
+//            std::cout << " " << std::endl;
+            
+             //project the original ray onto the new bases
              double projA = (ray->d.x * direction.x + ray->d.y * direction.y)/sqrt(direction.x * direction.x + direction.y * direction.y);
              double projB = (ray->d.x * orthoDirection.x + ray->d.y * orthoDirection.y)/sqrt(orthoDirection.x * orthoDirection.x + orthoDirection.y * orthoDirection.y);
              double projC = ray->d.z;
@@ -1071,7 +1020,15 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
             //convert from ab space back to x,y space
             ray->d.x = direction.x * newProjA + orthoDirection.x * newProjB;
             ray->d.y = direction.y * newProjA + orthoDirection.y * newProjB;
-
+            
+            // Tlian: If NaN's in the ray, return 0
+            // TODO: Why does this happen?
+//            if (ray->d.HasNaNs()) {
+//                std::cout << "ray has NaN's"<< std::endl;
+//                ray->d = Vector(0,0,0);
+//                return 0.f;
+//            }
+            
             ray->d = Normalize(ray->d);       
         }
         //------------end diffraction-----------------        

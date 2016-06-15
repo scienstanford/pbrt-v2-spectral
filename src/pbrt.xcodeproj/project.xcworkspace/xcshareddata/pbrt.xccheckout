@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>09EA8D14-AF3C-4CBA-9592-162B63C07A92</string>
+	<key>IDESourceControlProjectName</key>
+	<string>pbrt</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>B71F158071CFD1C9C8C9405E91CF20FBC8FA971E</key>
+		<string>https://github.com/scienstanford/pbrt-v2-spectral.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>src/pbrt.xcodeproj</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>B71F158071CFD1C9C8C9405E91CF20FBC8FA971E</key>
+		<string>../../..</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>https://github.com/scienstanford/pbrt-v2-spectral.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>111</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>B71F158071CFD1C9C8C9405E91CF20FBC8FA971E</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>B71F158071CFD1C9C8C9405E91CF20FBC8FA971E</string>
+			<key>IDESourceControlWCCName</key>
+			<string>pbrt-v2-spectral-SCIEN</string>
+		</dict>
+	</array>
+</dict>
+</plist>
