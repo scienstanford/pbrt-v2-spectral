@@ -148,6 +148,7 @@ void SpectralImageFilm::AddSample(const CameraSample &sample,
             }
             pixel.Z += currentRay.maxt * filterWt;    //add the depth map data member to a pixel - depth is inherently stored in Ray
             //pixel.Z += currentRay.maxt;    //add the depth map data member to a pixel - depth is inherently stored in Ray
+            // std::cout << pixel.Z << std::endl;
         }
     }
 

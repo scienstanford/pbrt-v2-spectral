@@ -680,8 +680,12 @@ Filter *MakeFilter(const string &name,
 Film *MakeFilm(const string &name,
     const ParamSet &paramSet, Filter *filter) {    //original function
     Film *film = NULL;
+//    if (name == "image")
+//        film = CreateSpectralImageNoCameraFilm(paramSet, filter);
+    
+    // Put this back in (from Andy's old version of PBRT-spectral) to fix the depth issue. How to make it compatible with no-camera though?
     if (name == "image")
-        film = CreateSpectralImageNoCameraFilm(paramSet, filter);
+        film = CreateSpectralImageFilm(paramSet, filter);
     else
         Warning("Film \"%s\" unknown.", name.c_str());
     paramSet.ReportUnused();
@@ -689,12 +693,15 @@ Film *MakeFilm(const string &name,
 }
 
 
-
+// Note to self: Maybe we can get rid of the MakeFilm above and instead check to see if baseCamera is NULL, if it is we run CreateSpectralNoCameraImageFilm?
 Film *MakeFilm(const string &name,
     const ParamSet &paramSet, Filter *filter, Camera * baseCamera) {  //andy: this is an overloaded function... added the camera pointer for FOV calculation
     Film *film = NULL;
     if (name == "image")
-        film = CreateSpectralImageNoCameraFilm(paramSet, filter);   //ben: revised film type that writes multispectral but doesn't use special camera.
+            // Put this back in (from Andy's old version of PBRT-spectral) to fix the depth issue. How to make it compatible with no-camera though?
+        film = CreateSpectralImageFilm(paramSet, filter);
+//    if (name == "image")
+//        film = CreateSpectralImageNoCameraFilm(paramSet, filter);   //ben: revised film type that writes multispectral but doesn't use special camera.
     else if (name =="spectralImage")
     {
         //film = CreateSpectralImageFilm(paramSet, filter);  
@@ -1308,7 +1315,7 @@ Renderer *RenderOptions::MakeRenderer() const {
 Camera *RenderOptions::MakeCamera() const {
     Filter *filter = MakeFilter(FilterName, FilterParams);
     Camera *camera = NULL;
-    Film *film = MakeFilm(FilmName, FilmParams, filter); 
+    Film *film = MakeFilm(FilmName, FilmParams, filter);
     if (!film) Severe("Unable to create film.");
     camera = ::MakeCamera(CameraName, CameraParams,
         CameraToWorld, renderOptions->transformStartTime,
