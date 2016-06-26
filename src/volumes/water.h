@@ -81,7 +81,7 @@ public:
         
         // Absorption and scattering coefficients are in m^-1, but PBRT-spectral expects units as mm.
         // We adjust this difference here.
-        sig_a = sig_a/(1000);
+        sig_a = sig_a/(1000.f);
         
         // -----------------------------------
         // --------- Calculate sig_s ---------
@@ -89,23 +89,23 @@ public:
         
         // To get sig_s we integrate the VSF over the 0 to pi
         // and multiply by 2*pi (see Sedlazech et al 2011)
-        
         sig_s = 0.f;
-        Spectrum currVSF;
-        for (int angle = 0; angle < 181; angle++) {
+        if(largePartConc != 0 && smallPartConc != 0){
+            Spectrum currVSF;
+            for (int angle = 0; angle < 181; angle++) {
+                
+                // Calculate VSF for this angle
+                currVSF = sinf(angle*0.0174533f)*PhaseKopelevic(angle);
+                
+                // Sum up VSF's
+                sig_s += currVSF;
+            }
+            sig_s *= 2*3.14159f*deg2rad; //2*pi * deg2rad(1)
             
-            // Calculate VSF for this angle
-            currVSF = sinf(angle*0.0174533f)*PhaseKopelevic(angle);
-            
-            // Sum up VSF's
-            sig_s += currVSF;
+            // Absorption and scattering coefficients are in m^-1, but PBRT-spectral expects units as mm.
+            // We adjust this difference here.
+            sig_s = sig_s/(1000.f);
         }
-        sig_s *= 2*3.14159f*deg2rad; //2*pi * deg2rad(1)
-        
-        // Absorption and scattering coefficients are in m^-1, but PBRT-spectral expects units as mm.
-        // We adjust this difference here.
-        sig_s = sig_s/(1000);
-        
         
         
         WorldToVolume = Inverse(v2w);
@@ -143,8 +143,10 @@ public:
     // "Given a pair of directions, the VolumeRegion::p() returns the value of the phase function at the given point and the given time."
     // We'll want to use our own phase function (e.g. Kopelevic model)
     Spectrum p(const Point &p, const Vector &wi, const Vector &wo, float) const{
-            if (!extent.Inside(WorldToVolume(p))) return 0.;
-
+        
+        if (!extent.Inside(WorldToVolume(p))) return 0.;
+        if (largePartConc == 0 && smallPartConc == 0) return 0.;
+        
         float costheta = Dot(wi, wo);
         float theta = acosf(costheta);
         
