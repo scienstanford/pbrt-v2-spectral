@@ -95,18 +95,18 @@ public:
             for (int angle = 0; angle < 181; angle++) {
                 
                 // Calculate VSF for this angle
-                currVSF = sinf(angle*0.0174533f)*PhaseKopelevic(angle);
+                currVSF = sinf(angle*deg2rad)*PhaseKopelevic(angle);
                 
                 // Sum up VSF's
                 sig_s += currVSF;
             }
+            //This deg2rad is here is because of the way we are integrating above
             sig_s *= 2*3.14159f*deg2rad; //2*pi * deg2rad(1)
             
             // Absorption and scattering coefficients are in m^-1, but PBRT-spectral expects units as mm.
             // We adjust this difference here.
             sig_s = sig_s/(1000.f);
         }
-        
         
         WorldToVolume = Inverse(v2w);
         extent = e;
@@ -154,8 +154,8 @@ public:
             //Input vector is probably the same as the output vector.
             theta = 180;
         }
-    
-        return (PhaseKopelevic(theta)/sig_s);
+
+        return ((PhaseKopelevic(theta)/1000.f)/sig_s);
     }
     
     
