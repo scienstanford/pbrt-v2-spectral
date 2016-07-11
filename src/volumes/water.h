@@ -88,14 +88,17 @@ public:
         // -----------------------------------
         
         // To get sig_s we integrate the VSF over the 0 to pi
-        // and multiply by 2*pi (see Sedlazech et al 2011)
+        // and multiply by 2*pi (see Sedlazech et al 2011, eq 7)
         sig_s = 0.f;
         if(largePartConc != 0 && smallPartConc != 0){
             Spectrum currVSF;
             for (int angle = 0; angle < 181; angle++) {
+
+                // All methods take in angles as radians
+                float angleRad = angle*deg2rad;
                 
                 // Calculate VSF for this angle
-                currVSF = sinf(angle*deg2rad)*PhaseKopelevic(angle);
+                currVSF = sinf(angleRad)*PhaseKopelevic(angleRad);
                 
                 // Sum up VSF's
                 sig_s += currVSF;
@@ -151,10 +154,10 @@ public:
         float theta = acosf(costheta);
         
         if (isnan(theta)) {
-            //Input vector is probably the same as the output vector.
-            theta = 180;
+            //theta is probably 180
+            theta = 2*3.14159f;
         }
-
+        
         return ((PhaseKopelevic(theta)/1000.f)/sig_s);
     }
     
@@ -162,7 +165,8 @@ public:
     // TODO: Move this into volume.cpp with all the other phase functions at some point.
     Spectrum PhaseKopelevic(float angle) const{
 
-        float costheta = cosf(angle*0.0174533f);
+        // Angle is given in radians!
+        float costheta = cosf(angle);
         
         float coeff = (1.21e-4)*(1+0.835*costheta*costheta);
         Spectrum p = coeff*lam0_over_lam;
@@ -184,13 +188,19 @@ public:
     
     
     // Get the corresponding VSF value for a given angle with VSFsmall
-    float getVSFsmall(float &angle) const{
+    float getVSFsmall(float &radAngle) const{
+        
+        // Convert to degrees, since VSFsmall/VSFlarge is defined in terms of degrees
+        float angle = radAngle*rad2deg;
         
         float value = 0;
         
         // Symmetric VSF
         if (angle < 0) {
             angle = -1.*angle;
+        }else if (angle > 180 && angle < 181){
+            // This sometimes happens because of radians to degrees conversion rounding errors
+            angle = 180;
         }
         
         //TODO: Binary search would be faster
@@ -218,20 +228,27 @@ public:
         
         // DEBUG
         if (!DEBUG_foundValue) {
-            Error("Couldn't find a value for VSFsmall!!");
             std::cout << "Angle is " << angle << std::endl;
+            Error("Couldn't find a value for VSFsmall!!");
         }
         return value;
     }
     
     // Get the corresponding VSF value for a given angle with VSFsmall
-    float getVSFlarge(float &angle) const{
+    float getVSFlarge(float &radAngle) const{
+        
+        
+        // Convert to degrees, since VSFsmall/VSFlarge is defined in terms of degrees
+        float angle = radAngle*rad2deg;
         
         float value = 0;
         
         // Symmetric VSF
         if (angle < 0) {
             angle = -1.*angle;
+        }else if (angle > 180 && angle < 181){
+            // This sometimes happens because of radians to degrees conversion rounding errors
+            angle = 180;
         }
         
         //TODO: Binary search would be faster
@@ -292,8 +309,8 @@ private:
     Spectrum VSFsmallConst; // For calculating the VSF for small/large particles
     Spectrum VSFlargeConst;
     
-    float deg2rad = 0.0175f;
-    
+    float deg2rad = 0.0174533f;
+    float rad2deg = 57.2958f;
     // Wavelengths
     static const int waveSamples = 30;
     const float wavelengths[waveSamples] = {
