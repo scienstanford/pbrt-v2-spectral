@@ -32,11 +32,11 @@ WaterVolumeDensity::WaterVolumeDensity(Spectrum absorption, string vsfFile, cons
     // To get sig_s we integrate the VSF over the 0 to pi
     // and multiply by 2*pi (see Sedlazech et al 2011, eq 7)
     sig_s = 0.f;
-    Spectrum currVSF;
-    vector<Spectrum>::iterator angle_i;
-    for (angle_i = VSF.begin(); angle_i < VSF.end(); angle_i++) {
+//    vector<Spectrum>::iterator angle_i;
+    float currAngle = 0;
+    for (int angle = 0; angle < 181; angle++) {
         // Sum up VSF's over 0 to 180 degrees
-        sig_s += *angle_i;
+        sig_s += VSF[angle]*sinf(angle*deg2rad);
     }
     
     //This deg2rad is here is because of the way we are integrating above
@@ -60,14 +60,14 @@ void WaterVolumeDensity::ReadVSFFile(const string &filename, vector<Spectrum> *v
     string vsfFile = AbsolutePath(ResolveFilename(filename));
     vector<float> vsfSpectrums;
     if (!ReadFloatFile(vsfFile.c_str(), &vsfSpectrums)) {
-        Warning("Unable to read VSF file!");
+        Error("Unable to read VSF file!");
         return;
     }
     
     // Find the number of samples in each spectrum. This should be saved as the first value in the file.
     int numWlsSamples = (int)vsfSpectrums[0];
     if ((vsfSpectrums.size()-1) % numWlsSamples != 0){
-        Warning("The number of wavelength samples specified in the VSF spectrum is incorrect!");
+        Error("The number of wavelength samples specified in the VSF spectrum is incorrect!");
         return;
     }
     
@@ -128,6 +128,7 @@ Spectrum WaterVolumeDensity::p(const Point &p, const Vector &wi, const Vector &w
         Error("Couldn't find phase function for this angle!");
     }
     
+    Spectrum test = (vsf_thisAngle/1000.f)/sig_s;
     
     return ((vsf_thisAngle/1000.f)/sig_s);
 }
