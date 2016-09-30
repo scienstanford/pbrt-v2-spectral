@@ -394,12 +394,6 @@ public:
             if ((wavelength > w0) && (wavelength <= w1)){
                 t = (wavelength - w0)/(w1-w0);
                 *output = Lerp(t, c[i], c[i+1]);
-//                std::cout << "w0 = " << w0 << std::endl;
-//                std::cout << "w1 = " << w1 << std::endl;
-//                std::cout << "t = " << t << std::endl;
-//                std::cout << "c[i] = " << c[i] << std::endl;
-//                std::cout << "c[i+1] = " << c[i+1] << std::endl;
-//                std::cout << "output = " << &output << std::endl;
                 return;
             }
         }
