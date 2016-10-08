@@ -20,7 +20,7 @@
 class WaterVolumeDensity : public VolumeRegion {
 public:
     // WaterVolumeDensity Public Methods
-    WaterVolumeDensity(Spectrum absorption, string vsfFile, const BBox &e, const Transform &v2w);
+    WaterVolumeDensity(Spectrum absorption, Spectrum scattering, string phaseFile, const BBox &e, const Transform &v2w);
     
     // PBRT (p.590): "Because the bound is maintained internally in the volume's object space, it must be transformed to world space for the WorldBound() method."
     BBox WorldBound() const { return Inverse(WorldToVolume)(extent);}
@@ -58,8 +58,8 @@ public:
     }
     
     /*
-     ------- READ VSF FILE ------
-     The VSF is a 2D matrix with the rows being the angles (0 to 180 degrees) and the columns being wavelength samples.
+     ------- READ PHASE FILE ------
+     "phase" is a 2D matrix with the rows being the angles [0,180) and the columns being wavelength samples.
      We read this in from a text file outputted by MATLAB code.
      This first value should be the number of wavelengths in each spectrum.
      This first row (after the first value) should be the wavelength samples. We need this to create the spectrum from sampled values.
@@ -71,12 +71,12 @@ public:
      1_1  1_2  1_3  ... 1_30
      ...
      ...
-     180_1 180_2 180_3 ... 180_30
+     179_1 179_2 179_3 ... 179_30
      
-     WARNING: VSF rows MUST be in degrees, at 1 degree intervals (i.e. 0,1,2,3...,178,179,180)
-     In other words there MUST be 181+1+1 = 183 rows in the text file
+     WARNING: Phase function rows MUST be in degrees, at 1 degree intervals (i.e. 0,1,2,3...,178,179)
+     In other words there MUST be 180+1+1 = 182 rows in the text file
      */
-    void ReadVSFFile(const string &filename, vector<Spectrum> *vsf);
+    void ReadPhaseFile(const string &filename, vector<Spectrum> *vsf);
     
 
 private:
@@ -85,10 +85,10 @@ private:
     
     // Read this in from user
     Spectrum sig_a;
-    vector<Spectrum> VSF;
-    
-    // Calculated
     Spectrum sig_s;
+    vector<Spectrum> phaseFunction;
+
+    
     Transform WorldToVolume;
     
     float deg2rad = 0.0174533f;
