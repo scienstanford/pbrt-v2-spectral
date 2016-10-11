@@ -78,8 +78,8 @@ SpectralImageFilm::SpectralImageFilm(int xres, int yres, Filter *filt, const flo
 //Andy: this needs to be modified - modified
 void SpectralImageFilm::AddSample(const CameraSample &sample,
                           const Spectrum &L, const Ray &currentRay) {
-
-    //std::cout << "got to AddSample()\n";
+    
+    
     // Compute sample's raster extent
     float dimageX = sample.imageX - 0.5f;
     float dimageY = sample.imageY - 0.5f;
@@ -134,16 +134,15 @@ void SpectralImageFilm::AddSample(const CameraSample &sample,
                 pixel.Lxyz[2] += filterWt * xyz[2];*/
 		        for (int i = 0; i < nSpectralSamples; i++)  //fixed some of the brackets... need to check
                 {
-			        pixel.c[i] += filterWt * origC[i];                    
-                }
+			        pixel.c[i] += filterWt * origC[i];                }
                 pixel.weightSum += filterWt;
             }
             else {
                     // Safely update _Lxyz_ and _weightSum_ even with concurrency
 		        for (int i = 0; i < nSpectralSamples; i++)
                 {   
-			        AtomicAdd(&pixel.c[i], filterWt * origC[i]);    
-                }   
+			        AtomicAdd(&pixel.c[i], filterWt * origC[i]);
+                }
                 AtomicAdd(&pixel.weightSum, filterWt);
             }
             pixel.Z += currentRay.maxt * filterWt;    //add the depth map data member to a pixel - depth is inherently stored in Ray
@@ -159,15 +158,12 @@ void SpectralImageFilm::AddSample(const CameraSample &sample,
 
 
 //Andy: this needs to be modified to allow for more than 3 channel splatting.  Try to understand this more.  Do we need depth map processing here?
+// Trisha: I think this has already been figured out below. The above comment is probably dated.
 void SpectralImageFilm::Splat(const CameraSample &sample, const Spectrum &L) {
     if (L.HasNaNs()) {
         Warning("SpectralImageFilm ignoring splatted spectrum with NaN values");
         return;
     }
-    
-    //don't need this anymore
-    //float xyz[3];
-    //L.ToXYZ(xyz);
 
     int x = Floor2Int(sample.imageX), y = Floor2Int(sample.imageY);
     if (x < xPixelStart || x - xPixelStart >= xPixelCount ||
@@ -177,10 +173,7 @@ void SpectralImageFilm::Splat(const CameraSample &sample, const Spectrum &L) {
 	for (int i = 0; i < nSpectralSamples; i++)
 	{
 		AtomicAdd(&pixel.splatC[i], pixel.splatC[i]);
-	}	
-    
-    //AtomicAdd(&pixel.splatXYZ[1], xyz[1]);
-    //AtomicAdd(&pixel.splatXYZ[2], xyz[2]);
+	}
 }
 
 
@@ -267,24 +260,18 @@ void SpectralImageFilm::ParseConversionMatrix(string filename){
 //Andy changed
 void SpectralImageFilm::WriteImage(float splatScale) {
 
-	//static const int sampledLambdaStart = 400;
-	//static const int sampledLambdaEnd = 700;
-	//static const int nSpectralSamples = 30;
 
     //Andy: will need to multiply by the conversion matrix for final output!
 
     // Convert image to RGB and compute final pixel values
     int nPix = xPixelCount * yPixelCount;
-    //float *rgb = new float[3*nPix];  old code
     float *finalC = new float[nSpectralSamples * nPix];
     float *finalZ = new float[nPix * 3];
 
     int offset = 0;
     for (int x = 0; x < xPixelCount; ++x) {
         for (int y = 0; y < yPixelCount; ++y) {
-        
-            // Convert pixel XYZ color to RGB
-            //XYZToRGB((*pixels)(x, y).Lxyz, &rgb[3*offset]);     //Andy: don't need this for now - want to keep it in spectrum
+            
 	        for (int ind = 0; ind < nSpectralSamples; ind++)
 	        {
                 //*pixels(x,y).c[ind] contains computed spectral intensity of the image
@@ -295,40 +282,32 @@ void SpectralImageFilm::WriteImage(float splatScale) {
             finalZ[(y*xPixelCount + x) * 3 + 1] = (*pixels)(x,y).Z;  //do this 3 times so we have a grayscale .exr image
             finalZ[(y*xPixelCount + x) * 3 + 2] = (*pixels)(x,y).Z;  
 
-            // Normalize pixel with weight sum
             // TODO: we may need to eliminate this "filtering" later
             float weightSum = (*pixels)(x, y).weightSum;  // Andy: will still need this, but need to make a for loop for all channels
             if (weightSum != 0.f) {
                 float invWt = 1.f / weightSum;
-		        //Andy: new for loop
+
 		        for (int i = 0; i < nSpectralSamples; i++)
 		        {
-			        finalC[nSpectralSamples * offset + i] =  max(0.f, finalC[nSpectralSamples*offset + i  ]);  //TODO: investigate invWt
-
+			        finalC[nSpectralSamples * offset + i] =  max(0.f, finalC[nSpectralSamples*offset + i  ]);
+                    // No invWt here.
+                    // For our simulation, we simply add up all the "rays" that hit the sensor pixel - we don't do any normalization at all. In other words, the higher the number of pixel samples, the larger the pixel values will be. The spectrums given to the lights are all in relative values. In ISET, we scale the output pixel values to a mean luminance to get an actual physical value.
 		        }
+                
+                // Depth map weighting
                 finalZ[3 * offset ] = max(0.f, finalZ[3*offset] * invWt);
                 finalZ[3 * offset + 1] = max(0.f, finalZ[3*offset + 1] * invWt);
                 finalZ[3 * offset + 2] = max(0.f, finalZ[3*offset + 2] * invWt);
-		        /*
-                rgb[3*offset  ] = max(0.f, rgb[3*offset  ] * invWt);
-                rgb[3*offset+1] = max(0.f, rgb[3*offset+1] * invWt);
-                rgb[3*offset+2] = max(0.f, rgb[3*offset+2] * invWt);*/
+
             }
+            
 
             //Add splat value at pixel
-	        //Andy: will probably still need this as well, but once again need all channels
-            //float splatRGB[3];
-            //XYZToRGB((*pixels)(x, y).splatXYZ, splatRGB);
 	        float * splatC = (*pixels)(x, y).splatC;
-            /*rgb[3*offset  ] += splatScale * splatRGB[0];
-            rgb[3*offset+1] += splatScale * splatRGB[1];
-            rgb[3*offset+2] += splatScale * splatRGB[2];*/
 
-	        //Andy: new
 	        for (int i = 0; i < nSpectralSamples; i++)
 	        {
-	        	finalC[nSpectralSamples * offset + i] += splatScale * splatC[nSpectralSamples]; 
-		        //std::cout << finalC[nSpectralSamples * offset + i] << "\t";
+	        	finalC[nSpectralSamples * offset + i] += splatScale * splatC[nSpectralSamples];
 	        }
             ++offset;
         }
@@ -353,7 +332,7 @@ void SpectralImageFilm::WriteImage(float splatScale) {
 
         }
     }    
-
+    
     //declare text file stream
     std::ofstream myfile;
     int lastPos = filename.find_last_of(".");

@@ -154,6 +154,7 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
     vector<float> vals;
 	float lastAperture = 0;
 	
+    std::cout << fn.c_str() << std::endl;
     //check to see if there is valid input in the lens file.
     if (!ReadFloatFile(fn.c_str(), &vals)) {
         Warning("Unable to read lens file!");
