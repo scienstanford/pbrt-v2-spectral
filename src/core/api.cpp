@@ -97,6 +97,7 @@
 #include "renderers/createprobes.h"
 #include "renderers/metropolis.h"
 #include "renderers/samplerrenderer.h"
+#include "renderers/spectralrenderer.h" // Added by Trisha
 #include "renderers/surfacepoints.h"
 #include "samplers/adaptive.h"
 #include "samplers/bestcandidate.h"
@@ -1287,7 +1288,7 @@ Renderer *RenderOptions::MakeRenderer() const {
         RendererParams.ReportUnused();
     }
     else {
-        if (RendererName != "sampler")
+        if (RendererName != "sampler" && RendererName != "spectralrenderer") // Added by Trisha
             Warning("Renderer type \"%s\" unknown.  Using \"sampler\".",
                     RendererName.c_str());
         bool visIds = RendererParams.FindOneBool("visualizeobjectids", false);
@@ -1301,8 +1302,18 @@ Renderer *RenderOptions::MakeRenderer() const {
         VolumeIntegrator *volumeIntegrator = MakeVolumeIntegrator(VolIntegratorName,
             VolIntegratorParams);
         if (!volumeIntegrator) Severe("Unable to create volume integrator.");
-        renderer = new SamplerRenderer(sampler, camera, surfaceIntegrator,
-                                       volumeIntegrator, visIds);
+        
+        // We have to put the spectral renderer here because it needs the samplers above, much like SamplerRenderer
+        if(RendererName == "spectralrenderer"){
+            Warning("Rendering with spectral renderer. Rendering time will be slow!");
+            renderer = new SpectralRenderer(sampler, camera, surfaceIntegrator,
+                                            volumeIntegrator, visIds);
+        }
+        else{
+            renderer = new SamplerRenderer(sampler, camera, surfaceIntegrator,
+                                           volumeIntegrator, visIds);
+        }
+        
         // Warn if no light sources are defined
         if (lights.size() == 0)
             Warning("No light sources defined in scene; "

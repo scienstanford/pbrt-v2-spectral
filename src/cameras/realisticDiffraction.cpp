@@ -330,7 +330,6 @@ void RealisticDiffractionCamera::applySnellsLaw(float n1, float n2, float lensRa
     //add chromatic abberation effect (changing index of refraction) here - basic for now
     if (chromaticAberrationEnabled)
     {
-       // std::cout << "ray->wavelength: " << ray->wavelength << "\n";
         if (n1 != 1)
             n1 = (ray->wavelength - 550) * -.04/(300)  +  n1;              //should be .04     
         if (n2 != 1)

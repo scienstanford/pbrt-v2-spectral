@@ -381,7 +381,7 @@ public:
     //
     //Trisha Added (6-2016)
     // Get the value in the spectrum at a specific wavelength.
-    void GetSpectrumAtWavelength(float wavelength, float *output){
+    void GetValueAtWavelength(float wavelength, float *output){
         
         float w0; float w1; float t;
         float step = (sampledLambdaEnd - sampledLambdaStart)/nSpectralSamples;
@@ -391,7 +391,7 @@ public:
             w0 = sampledLambdaStart + i*step;
             w1 = sampledLambdaStart + (i+1)*step;
             
-            if ((wavelength > w0) && (wavelength <= w1)){
+            if ((wavelength >= w0) && (wavelength < w1)){
                 t = (wavelength - w0)/(w1-w0);
                 *output = Lerp(t, c[i], c[i+1]);
                 return;
@@ -403,6 +403,15 @@ public:
         return;
     }
     //
+    
+    //
+    //Trisha Added (10-2016)
+    // Assign a value at a specific index (not wavelength!)
+    void AssignValueAtIndex(int index, float value){
+        c[index] = value;
+    }
+    //
+    
     
     float y() const {
         float yy = 0.f;
