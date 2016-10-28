@@ -422,6 +422,19 @@ float RealisticDiffractionCamera::getSensorWidth()
 
 float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *ray) const
 {
+    
+    // TL:                     z=0         z= -filmDistance
+    //                  |  |    ||           |
+    //                  |  |    ||           |
+    //  Scene <---------|--|----||---------> |
+    //            +z    |  |    ||    -z     |
+    //                  |  |    ||           |
+    //                Lens Elements        Sensor
+    //
+    
+    
+    
+    
     // use sample->imageX and sample->imageY to get raster-space coordinates
     // of the sample point on the film.
     // use sample->lensU and sample->lensV to get a sample position on the lens
@@ -928,11 +941,33 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
                 // scene ..... n2 <-----> |lens element| <----> n1  ..... sensor
                 
                 
-                // If we're not at the last lens...
-                if (i-1 >= 0)
+                // If we're not at the lens closest to the scene, we use the next IOR
+                // If we're at the end, we assume it's air in the scene
+                if (i-1 >= 0){
+                    
                     n2 = lensEls[i-1].n;
-                else
+                    
+                    // Trisha: If we're entering the aperture (n2 == 0) we skip the n2 == 0 and apply the next medium.
+                    // (We put this in the current if statement so we can handle the unique case when the aperture is the first element.)
+                    
+                    //                 |    /
+                    //                 |   |
+                    //                 |  |
+                    // <-----            |    <------
+                    //  n2, [i-2]      |  |        n1, [i]
+                    //                 |   |
+                    //                 |    \
+                    //
+                    //           aperture, [i-1]
+                    
+                    if(n2 == 0)
+                        n2 = lensEls[i-2].n;
+                    
+                }
+                else{
                     n2 = 1;
+                }
+
                 
                 applySnellsLaw( n1,  n2,  lensRadius, normalVec, ray );
                 
