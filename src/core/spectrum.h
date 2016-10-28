@@ -381,7 +381,7 @@ public:
     //
     //Trisha Added (6-2016)
     // Get the value in the spectrum at a specific wavelength.
-    void GetValueAtWavelength(float wavelength, float *output){
+    void GetValueAtWavelength(float wavelength, float *output) const{
         
         float w0; float w1; float t;
         float step = (sampledLambdaEnd - sampledLambdaStart)/nSpectralSamples;

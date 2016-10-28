@@ -1,4 +1,4 @@
-// cameras/realistic.cpp*
+
 #include "stdafx.h"
 #include "cameras/realisticDiffraction.h"
 #include "paramset.h"
@@ -74,6 +74,13 @@ RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &par
     int numPinholesW = (int) params.FindOneFloat("num_pinholes_w", -1);
     int numPinholesH = (int) params.FindOneFloat("num_pinholes_h", -1);
     bool microlensFlag = params.FindOneFloat("microlens_enabled", 0);
+    
+    // -----------------------------------------
+    // ----- Gullstrand Eye Parameters ---------
+    // -----------------------------------------
+    // Whether to use realistic index of refractions for tracing through the Gullstrand eye.
+    bool IORforEyeFlag = params.FindOneBool("IORforEyeEnabled", 0.0);
+    
 	   
     // TL: We don't use hither, yon, or the shutter parameters in our code, so no need to assert.
     /*	   assert(hither != -1 && yon != -1 && shutteropen != -1 &&
@@ -83,7 +90,7 @@ RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &par
     
     return new RealisticDiffractionCamera(cam2world, hither, yon,
                                           shutteropen, shutterclose, filmdistance, apdiameter,
-                                          specfile, filmdiag, curveradius, film, diffractFlag, chromaticFlag, xOffset, yOffset, pinholeExitApX, pinholeExitApY, pinholeExitApZ, filmcenterX, filmcenterY, numPinholesW, numPinholesH, microlensFlag);
+                                          specfile, filmdiag, curveradius, film, diffractFlag, chromaticFlag, xOffset, yOffset, pinholeExitApX, pinholeExitApY, pinholeExitApZ, filmcenterX, filmcenterY, numPinholesW, numPinholesH, microlensFlag,IORforEyeFlag);
 }
 
 
@@ -108,7 +115,8 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
                                                        float filmCenterYIn,
                                                        int numPinholesWIn,
                                                        int numPinholesHIn,
-                                                       bool microlensFlagIn)
+                                                       bool microlensFlagIn,
+                                                       bool IORforEyeFlagIn)
 : Camera(cam2world, sopen, sclose, f), ShutterOpen(sopen), ShutterClose(sclose),film(f)
 {
     
@@ -130,6 +138,7 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
     numPinholesW = numPinholesWIn;
     numPinholesH = numPinholesHIn;
     microlensFlag = microlensFlagIn;
+    IORforEyeFlag = IORforEyeFlagIn;
     
     // Display Light Field parameters
     /*
@@ -183,7 +192,21 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
         lastAperture = currentLensEl.aperture;
     }
     
+    // -------------------------
+    // --- Set Up Eye Model ----
+    // -------------------------
     
+    // If we are ray tracing through the eye and want chromatic aberration, we set up the IOR curves to be used, i.e. n(lambda)
+    // Load values into a spectrum class. These values are interpolated to the wave samples specified in "spectrum.h"
+    if(IORforEyeFlag){
+        corneaIOR = Spectrum::FromSampled(eyeWaveSamples, corneaIORraw, numEyeWaveSamples);
+        aqueousIOR = Spectrum::FromSampled(eyeWaveSamples, aqueousIORraw, numEyeWaveSamples);
+        eyeLensIOR = Spectrum::FromSampled(eyeWaveSamples, lensIORraw, numEyeWaveSamples);
+        vitreousIOR = Spectrum::FromSampled(eyeWaveSamples, vitreousIORraw, numEyeWaveSamples);
+        
+        //DEBUG
+        std::cout << "Eye IOR curves have been set." << std::endl;
+    }
     
     // Display Camera parameters
     
@@ -324,25 +347,56 @@ void RealisticDiffractionCamera::runLensFlare(const Scene * scene, const Rendere
 void RealisticDiffractionCamera::applySnellsLaw(float n1, float n2, float lensRadius, Vector &normalVec, Ray * ray ) const
 {
     
-    //lens overall aperture case
-    if (n1 == 0)
-        n1 = 1;
-    if (n2 ==0)
-        n2 = 1;
+    // n1 = IOR for medium closer to sensor
+    // n2 = IOR for medium closer to scene
     
-    //add chromatic abberation effect (changing index of refraction) here - basic for now
-    if (chromaticAberrationEnabled)
+    // scene....n2 <----> Lens Element <----> n1 ....sensor
+    
+    
+    //Andy: add chromatic aberration effect (changing index of refraction) here - basic for now
+    // TODO: There probably doesn't need to be a flag for chromatic aberration and then another flag for the eye IOR. What's the best way to combine these? Anyway for now, let's just make sure the IOR works.
+    
+    if (IORforEyeFlag){
+        // Look up the accurate n1 and n2 values according to the ray wavelength.
+        // TODO: Assert that ray->wavelength is not empty, otherwise alert the user that we're not using the spectral renderer.
+        
+        // How do we determine which ocular medium we're in right now? Right now I'm just going to check the n value loaded from the lens file, but this might not be consistent long term.
+        // TODO: What's the best way to organize this? Maybe we should just make subclasses of realisticDiffraction somehow.
+        if (abs(n1-1.336) < 0.001) {
+            vitreousIOR.GetValueAtWavelength(ray->wavelength,&n1);
+            eyeLensIOR.GetValueAtWavelength(ray->wavelength, &n2);
+        }else if(abs(n1-1.42) < 0.001){
+            eyeLensIOR.GetValueAtWavelength(ray->wavelength, &n1);
+            aqueousIOR.GetValueAtWavelength(ray->wavelength, &n2);
+        }else if(abs(n1-1.3374) < 0.001){
+            aqueousIOR.GetValueAtWavelength(ray->wavelength, &n1);
+            corneaIOR.GetValueAtWavelength(ray->wavelength, &n2);
+        }else if(abs(n1-1.3771) < 0.001){
+            corneaIOR.GetValueAtWavelength(ray->wavelength, &n1);
+            n2 = 1;
+        }
+    
+    }else if(chromaticAberrationEnabled)
     {
         if (n1 != 1)
             n1 = (ray->wavelength - 550) * -.04/(300)  +  n1;              //should be .04
         if (n2 != 1)
             n2 = (ray->wavelength - 550) * -.04/(300)  +  n2;
     }
+
+    // ------ DEBUG
+    // Verify that the IOR's have changed:
+    /*
+    std::cout << "Wavelength: " << ray->wavelength << std::endl;
+    std::cout << "n1 = " << n1 << std::endl;
+    std::cout << "n2 = " << n2 << std::endl;
+     */
+    // ------
     
     Vector s1 = ray->d;
     if (lensRadius >0)
         normalVec = -normalVec;
-    
+
     float radicand = 1 - (n1/n2) * (n1/n2) * Dot(Cross(normalVec, s1), Cross(normalVec, s1));
     if (radicand < 0){
         ray->d = Vector(0, 0,0);
@@ -831,18 +885,12 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
     // --- Trace through the lens elements of the main lens ---
     // --------------------------------------------------------
     
-    //                   |           |
-    //                   |           |
-    //  Scene <--------- | <-------- |
-    //                   |    +z     |
-    //                   |           |
-    //                 Lens       Sensor
-    
     
     float lensDistance = 0; // How far we are from the "0" on the z-axis, i.e. the position of the lens closest to the sensor
     
     for (int i = lensEls.size()-1; i>=0 ; i--)
     {
+        
         float lensRadius = lensEls[i].radius;
         lensDistance += lensEls[i].separation;
         float currentAperture = lensEls[i].aperture;
@@ -865,7 +913,7 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
             
             float tAperture = 0;
             if (i == lensEls.size()-1)
-                tAperture = filmDistance/ray->d.z;   //special case for when aperture is the 1st element - doesn't make a difference
+                tAperture = filmDistance/ray->d.z;   //special case for when aperture is the 1st element
             else
                 tAperture = (lensDistance - ray->o.z)/(ray->d.z);
             
@@ -880,7 +928,7 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
             
             intersectPoint = apertureIntersect;
             startingPoint = intersectPoint;
-
+            
         }
         else
         {
