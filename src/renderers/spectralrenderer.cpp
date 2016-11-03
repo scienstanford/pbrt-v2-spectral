@@ -88,7 +88,7 @@ void SpectralRendererTask::Run() {
             
             // For each sample, we loop through all the wavelength bands and trace a new ray per wavelength. We then put all the returned values in a spectrum for the original sample. (TL)
             
-            // TODO: Verify that this method works. It's slighty different from what Andy did.
+            // This method is slighty different from what Andy did. The advantage of this method is that when a user specifies a certain number of ray samples, that's the exact number of main rays (in a wavelength "bundle") that will be generated. In other words, there won't be the issue of having a blue image because you did not specify enough rays. The disadvantage is that in general we need more rays, since a bundle of rays with different wavelengths are all sent in the same direction and don't split until they hit the lens. In Andy's old method, each ray with its own wavelength will be shot at a different direction. In the future let's think about which way is better.
             
             // TODO: For speedup purposes, we don't actually have to trace a new ray for every single spectral sample, we can also pick a few wavelength bands and trace rays for those, and then return the values associated with the band. For example, trace a new ray for 400-450 nm, and then assign the returned spectrum from 400 to 450 nm to the final radiance at the pixel.
             

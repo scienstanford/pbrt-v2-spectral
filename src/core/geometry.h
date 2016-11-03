@@ -314,7 +314,8 @@ public:
 class Ray {
 public:
     // Ray Public Methods
-    Ray() : mint(0.f), maxt(INFINITY), time(0.f), depth(0) { }
+    Ray() : mint(0.f), maxt(INFINITY), time(0.f), depth(0), wavelength(0) {
+    }
     Ray(const Point &origin, const Vector &direction,
         float start, float end = INFINITY, float t = 0.f, int d = 0)
         : o(origin), d(direction), mint(start), maxt(end), time(t), depth(d) { }

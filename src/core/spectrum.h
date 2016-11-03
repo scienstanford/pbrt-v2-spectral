@@ -392,6 +392,7 @@ public:
             w1 = sampledLambdaStart + (i+1)*step;
             
             if ((wavelength >= w0) && (wavelength < w1)){
+                
                 t = (wavelength - w0)/(w1-w0);
                 *output = Lerp(t, c[i], c[i+1]);
                 return;
@@ -399,7 +400,7 @@ public:
         }
         
         // Make sure we don't return 0. If we do, then we get NaN's!
-        Assert(&output != 0);
+        Assert(*output != 0);
         return;
     }
     //

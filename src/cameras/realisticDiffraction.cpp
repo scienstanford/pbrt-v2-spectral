@@ -356,10 +356,11 @@ void RealisticDiffractionCamera::applySnellsLaw(float n1, float n2, float lensRa
     //Andy: add chromatic aberration effect (changing index of refraction) here - basic for now
     // TODO: There probably doesn't need to be a flag for chromatic aberration and then another flag for the eye IOR. What's the best way to combine these? Anyway for now, let's just make sure the IOR works.
     
-    if (IORforEyeFlag){
-        // Look up the accurate n1 and n2 values according to the ray wavelength.
-        // TODO: Assert that ray->wavelength is not empty, otherwise alert the user that we're not using the spectral renderer.
+    // In the case that the user made a mistake and specified the IORforEyeFlag but not the spectralrenderer, the rays don't have a wavelength. They seem to be assigned random values that are outside the visible wavelength. Here I'm checking to make sure they're within the sampledLambda ranges in spectrum.h. This is not a very safe fix, so let's think about how to do this in the future (TODO: Make this less hacky?).
+    
+    if (IORforEyeFlag && (ray->wavelength != 0)){
         
+        // Look up the accurate n1 and n2 values according to the ray wavelength.
         // How do we determine which ocular medium we're in right now? Right now I'm just going to check the n value loaded from the lens file, but this might not be consistent long term.
         // TODO: What's the best way to organize this? Maybe we should just make subclasses of realisticDiffraction somehow.
         if (abs(n1-1.336) < 0.001) {
