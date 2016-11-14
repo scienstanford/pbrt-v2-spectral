@@ -511,9 +511,13 @@ SpectralImageFilm *CreateSpectralImageFilm(const ParamSet &params, Filter *filte
     
     //Andy changed to allow for parsing of conversionmatrixfile name
     SpectralImageFilm * newFilm = new SpectralImageFilm(xres, yres, filter, crop, filename, openwin);
-    string conversionMatrixFilename = params.FindOneString("conversionmatrixfile", "");   //params contains all the parsed attributes of film... we now look for the "conversionmatrixfile" entry, which is a string
+    
+    // Trisha: Comment this out for now since it generates an annoying warning everytime we render. I don't think we use conversion matrix at all right now, so I guess this is a TODO.
+    /*
+     string conversionMatrixFilename = params.FindOneString("conversionmatrixfile", "");   //params contains all the parsed attributes of film... we now look for the "conversionmatrixfile" entry, which is a string
     std::cout<< "\nconversionMatrixFilename: " << conversionMatrixFilename << "\n\n";
     newFilm->ParseConversionMatrix(conversionMatrixFilename);
+    */
     
     return newFilm;
 }
