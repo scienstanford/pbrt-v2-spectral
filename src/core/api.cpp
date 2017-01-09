@@ -52,7 +52,7 @@
 #include "film/spectralImageNoCamera.h"
 // Trisha
 #include "volumes/water.h"
-
+#include "integrators/classification.h"
 
 #include "filters/box.h"
 #include "filters/gaussian.h"
@@ -565,6 +565,8 @@ SurfaceIntegrator *MakeSurfaceIntegrator(const string &name,
         si = CreateDiffusePRTIntegratorSurfaceIntegrator(paramSet);
     else if (name == "glossyprt")
         si = CreateGlossyPRTIntegratorSurfaceIntegrator(paramSet);
+    else if (name == "classification")
+        si = CreateClassificationIntegrator(paramSet); // Added by Trisha
     else
         Warning("Surface integrator \"%s\" unknown.", name.c_str());
 
