@@ -34,15 +34,18 @@
 #include "scene.h"
 
 // ClassificationIntegrator Declarations
+enum ClassificationStrategy {CLASSIFY_BY_MESH, CLASSIFY_BY_MATERIAL};
 class ClassificationIntegrator : public SurfaceIntegrator {
 public:
     // ClassificationIntegrator Public Methods
-    ClassificationIntegrator();
+    ClassificationIntegrator(ClassificationStrategy ls = CLASSIFY_BY_MESH);
     ~ClassificationIntegrator();
     Spectrum Li(const Scene *scene, const Renderer *renderer,
         const RayDifferential &ray, const Intersection &isect,
         const Sample *sample, RNG &rng, MemoryArena &arena) const;
 private:
+    // ClassificationIntegrator Private Data
+    ClassificationStrategy strategy;
 };
 
 

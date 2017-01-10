@@ -39,6 +39,7 @@ struct Intersection {
     Intersection() {
         primitive = NULL;
         shapeId = primitiveId = 0;
+        materialId = 0; // Added by Trisha
         rayEpsilon = 0.f;
     }
     BSDF *GetBSDF(const RayDifferential &ray, MemoryArena &arena) const;
@@ -50,6 +51,7 @@ struct Intersection {
     const Primitive *primitive;
     Transform WorldToObject, ObjectToWorld;
     uint32_t shapeId, primitiveId;
+    uint32_t materialId; // Added by Trisha
     float rayEpsilon;
 };
 

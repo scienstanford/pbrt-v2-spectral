@@ -31,6 +31,7 @@
 #include "reflection.h"
 
 // Material Method Definitions
+uint32_t Material::nextmaterialId = 1; //Added by Trisha
 Material::~Material() {
 }
 
