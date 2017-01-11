@@ -198,6 +198,7 @@ struct RenderOptions {
     TransformSet CameraToWorld;
     vector<Light *> lights;
     vector<Reference<Primitive> > primitives;
+    vector<string> primitiveNames; // Added by Trisha, since we can't reverse search the "instances" map below
     mutable vector<VolumeRegion *> volumeRegions;
     map<string, vector<Reference<Primitive> > > instances;
     vector<Reference<Primitive> > *currentInstance;
@@ -1098,10 +1099,13 @@ void pbrtShape(const string &name, const ParamSet &params) {
         if (area)
             Warning("Area lights not supported with object instancing");
         renderOptions->currentInstance->push_back(prim);
+        
     }
     
     else {
         renderOptions->primitives.push_back(prim);
+        renderOptions->primitiveNames.push_back(name); // Added by Trisha
+        
         if (area != NULL) {
             renderOptions->lights.push_back(area);
         }
@@ -1194,6 +1198,7 @@ void pbrtObjectInstance(const string &name) {
     Reference<Primitive> prim =
         new TransformedPrimitive(in[0], animatedWorldToInstance);
     renderOptions->primitives.push_back(prim);
+    renderOptions->primitiveNames.push_back(name); // Added by Trisha
 }
 
 
@@ -1224,36 +1229,36 @@ void pbrtWorldEnd() {
     string newFileName;
     
     if(st == "mesh"){
-        // TODO: We can probably collapse this
         
         newFileName = filename.substr(0, lastPos) + "_mesh.txt";
         metadataFile.open(newFileName.c_str());
         
-        // Write out meshes
-        for(auto const& ent1 : renderOptions->instances) {
-            vector<Reference<Primitive> > allPrimitives = ent1.second;
-            for (auto it = allPrimitives.begin(); it!=allPrimitives.end(); ++it) {
-                Reference<Primitive> currPrimitive = *it;
-                metadataFile << currPrimitive->primitiveId << " ";
-                metadataFile << ent1.first << "\n";
-                metadataFile << "\n";
-            }
+                std::cout << renderOptions->primitives.size() << std::endl;
+        
+        vector<Reference<Primitive> >::iterator itInner;
+        int count = 0;
+        for (itInner = renderOptions->primitives.begin(); itInner != renderOptions->primitives.end(); itInner++,count++) {
+            Reference<Primitive> currPrimitive = *itInner;
+            metadataFile << currPrimitive->primitiveId << " ";
+            metadataFile << renderOptions->primitiveNames[count] << "\n";
         }
         std::cout << "Mesh metadata file written out." << std::endl;
-
-        
     }
     else if (st == "material"){
         newFileName = filename.substr(0, lastPos) + "_materials.txt";
         metadataFile.open(newFileName.c_str());
         
         // Write out materials
-        for(auto const& ent1 : graphicsState.namedMaterials) {
-            Reference<Material> currMaterial = ent1.second;
+        map<string, Reference<Material> >::iterator it;
+        for(it = graphicsState.namedMaterials.begin(); it != graphicsState.namedMaterials.end(); it++) {
+            Reference<Material> currMaterial = it->second;
             metadataFile << currMaterial->materialId << " ";
-            metadataFile << ent1.first << "\n";
+            metadataFile << it->first << "\n";
         }
         std::cout << "Material metadata file written out." << std::endl;
+    }
+    else{
+        std::cout << "Warning: No metadata written out." << std::endl;
     }
     
     metadataFile.close();
