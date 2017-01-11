@@ -21,6 +21,10 @@
 
  */
 
+// For writing out metdata file (Trisha)
+#include <fstream>
+#include <sstream>
+#include <iostream>
 
 // core/api.cpp*
 #include "stdafx.h"
@@ -52,7 +56,7 @@
 #include "film/spectralImageNoCamera.h"
 // Trisha
 #include "volumes/water.h"
-#include "integrators/classification.h"
+#include "integrators/metadata.h"
 
 #include "filters/box.h"
 #include "filters/gaussian.h"
@@ -565,8 +569,8 @@ SurfaceIntegrator *MakeSurfaceIntegrator(const string &name,
         si = CreateDiffusePRTIntegratorSurfaceIntegrator(paramSet);
     else if (name == "glossyprt")
         si = CreateGlossyPRTIntegratorSurfaceIntegrator(paramSet);
-    else if (name == "classification")
-        si = CreateClassificationIntegrator(paramSet); // Added by Trisha
+    else if (name == "metadata")
+        si = CreateMetadataIntegrator(paramSet); // Added by Trisha
     else
         Warning("Surface integrator \"%s\" unknown.", name.c_str());
 
@@ -686,7 +690,7 @@ Film *MakeFilm(const string &name,
 //    if (name == "image")
 //        film = CreateSpectralImageNoCameraFilm(paramSet, filter);
     
-    // Put this back in (from Andy's old version of PBRT-spectral) to fix the depth issue. How to make it compatible with no-camera though?
+    // Put this back in (from Andy's old version of PBRT-spectral) to fix the depth issue. How to make it compatible with no-camera though? (Trisha)
     if (name == "image")
         film = CreateSpectralImageFilm(paramSet, filter);
     else
@@ -1205,7 +1209,57 @@ void pbrtWorldEnd() {
         Warning("Missing end to pbrtTransformBegin()");
         pushedTransforms.pop_back();
     }
+    
+    // ----- Write out metadata information (Added by Trisha) ----
+    
+    // Get filename from metadataIntegrator
+    const ParamSet &paramSet = renderOptions->SurfIntegratorParams;
+    string filename = paramSet.FindOneString("filename", "metadata.txt");
+    
+    // Find type of metadata
+    string st = paramSet.FindOneString("strategy", "");
+    
+    std::ofstream metadataFile;
+    int lastPos = filename.find_last_of(".");
+    string newFileName;
+    
+    if(st == "mesh"){
+        // TODO: We can probably collapse this
+        
+        newFileName = filename.substr(0, lastPos) + "_mesh.txt";
+        metadataFile.open(newFileName.c_str());
+        
+        // Write out meshes
+        for(auto const& ent1 : renderOptions->instances) {
+            vector<Reference<Primitive> > allPrimitives = ent1.second;
+            for (auto it = allPrimitives.begin(); it!=allPrimitives.end(); ++it) {
+                Reference<Primitive> currPrimitive = *it;
+                metadataFile << currPrimitive->primitiveId << " ";
+                metadataFile << ent1.first << "\n";
+                metadataFile << "\n";
+            }
+        }
+        std::cout << "Mesh metadata file written out." << std::endl;
 
+        
+    }
+    else if (st == "material"){
+        newFileName = filename.substr(0, lastPos) + "_materials.txt";
+        metadataFile.open(newFileName.c_str());
+        
+        // Write out materials
+        for(auto const& ent1 : graphicsState.namedMaterials) {
+            Reference<Material> currMaterial = ent1.second;
+            metadataFile << currMaterial->materialId << " ";
+            metadataFile << ent1.first << "\n";
+        }
+        std::cout << "Material metadata file written out." << std::endl;
+    }
+    
+    metadataFile.close();
+
+    // ------------------------------------------------------------
+    
     // Create scene and render
     Renderer *renderer = renderOptions->MakeRenderer();
     Scene *scene = renderOptions->MakeScene();

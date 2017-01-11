@@ -21,6 +21,12 @@
 
  */
 
+/* -----------
+ This integrator renders metadata images such as masks based on material or meshes (for automatic classification) or depth maps. It is based off of the directlighting integrator.
+ 
+ Added by Trisha
+ -------------- */
+
 #if defined(_MSC_VER)
 #pragma once
 #endif
@@ -28,27 +34,28 @@
 #ifndef PBRT_INTEGRATORS_CLASSIFICATION_H
 #define PBRT_INTEGRATORS_CLASSIFICATION_H
 
-// integrators/classification.h*
+// integrators/metadata.h*
 #include "pbrt.h"
 #include "integrator.h"
 #include "scene.h"
 
-// ClassificationIntegrator Declarations
-enum ClassificationStrategy {CLASSIFY_BY_MESH, CLASSIFY_BY_MATERIAL};
-class ClassificationIntegrator : public SurfaceIntegrator {
+// MetadataIntegrator Declarations
+enum MetadataStrategy {MESH_MASK, MATERIAL_MASK, DEPTH_MAP};
+class MetadataIntegrator : public SurfaceIntegrator {
 public:
-    // ClassificationIntegrator Public Methods
-    ClassificationIntegrator(ClassificationStrategy ls = CLASSIFY_BY_MESH);
-    ~ClassificationIntegrator();
+    // MetadataIntegrator Public Methods
+    MetadataIntegrator(MetadataStrategy ls = MESH_MASK);
+    ~MetadataIntegrator();
     Spectrum Li(const Scene *scene, const Renderer *renderer,
         const RayDifferential &ray, const Intersection &isect,
         const Sample *sample, RNG &rng, MemoryArena &arena) const;
 private:
-    // ClassificationIntegrator Private Data
-    ClassificationStrategy strategy;
+    // MetadataIntegrator Private Data
+    MetadataStrategy strategy;
+    string filename;
 };
 
 
-ClassificationIntegrator *CreateClassificationIntegrator(const ParamSet &params);
+MetadataIntegrator *CreateMetadataIntegrator(const ParamSet &params);
 
 #endif // PBRT_INTEGRATORS_CLASSIFICATION_H

@@ -22,55 +22,62 @@
  */
 
 
-// integrators/classification.cpp*
+// integrators/metadata.cpp*
 #include "stdafx.h"
-#include "integrators/classification.h"
+#include "integrators/metadata.h"
 #include "intersection.h"
 #include "paramset.h"
 
-// ClassificationIntegrator Method Definitions
-ClassificationIntegrator::ClassificationIntegrator(ClassificationStrategy st) {
+// MetadataIntegrator Method Definitions
+MetadataIntegrator::MetadataIntegrator(MetadataStrategy st) {
     strategy = st;
 }
 
 
-ClassificationIntegrator::~ClassificationIntegrator() {
+MetadataIntegrator::~MetadataIntegrator() {
 }
 
 
 
-Spectrum ClassificationIntegrator::Li(const Scene *scene,
+Spectrum MetadataIntegrator::Li(const Scene *scene,
         const Renderer *renderer, const RayDifferential &ray,
         const Intersection &isect, const Sample *sample, RNG &rng, MemoryArena &arena) const {
     Spectrum L;
     switch (strategy) {
-        case CLASSIFY_BY_MESH:
+        case MESH_MASK:
             L = Spectrum(isect.primitiveId);
             break;
             
-        case CLASSIFY_BY_MATERIAL:
+        case MATERIAL_MASK:
             L =  Spectrum(isect.materialId);
             break;
+        case DEPTH_MAP:
+            L = Spectrum(ray.maxt); // TODO: Does this work correctly?
+            break;
+        default:
+            Error("No metadata integrator strategy specified!");
+            break;
     }
-    
+
     return L;
     
 }
 
 
-ClassificationIntegrator *CreateClassificationIntegrator(const ParamSet &params) {
-    ClassificationStrategy strategy;
-    string st = params.FindOneString("strategy", "mesh"); // Can be Mesh or Material
+MetadataIntegrator *CreateMetadataIntegrator(const ParamSet &params) {
+    MetadataStrategy strategy;
+    string st = params.FindOneString("strategy", "depth"); // Can be "mesh," "material," or "depth."
     
-    if (st == "mesh") strategy = CLASSIFY_BY_MESH;
-    else if (st == "material") strategy = CLASSIFY_BY_MATERIAL;
+    if (st == "mesh") strategy = MESH_MASK;
+    else if (st == "material") strategy = MATERIAL_MASK;
+    else if (st == "depth") strategy = DEPTH_MAP;
     else {
-        Warning("Strategy \"%s\" for classification unknown. "
-                "Using \"mesh\".", st.c_str());
-        strategy = CLASSIFY_BY_MESH;
+        Warning("Strategy \"%s\" for metadata unknown. "
+                "Using \"depth\".", st.c_str());
+        strategy = DEPTH_MAP;
     }
     
-    return new ClassificationIntegrator(strategy);
+    return new MetadataIntegrator(strategy);
 }
 
 
