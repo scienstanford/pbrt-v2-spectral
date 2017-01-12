@@ -1233,8 +1233,6 @@ void pbrtWorldEnd() {
         newFileName = filename.substr(0, lastPos) + "_mesh.txt";
         metadataFile.open(newFileName.c_str());
         
-                std::cout << renderOptions->primitives.size() << std::endl;
-        
         vector<Reference<Primitive> >::iterator itInner;
         int count = 0;
         for (itInner = renderOptions->primitives.begin(); itInner != renderOptions->primitives.end(); itInner++,count++) {

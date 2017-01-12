@@ -52,7 +52,9 @@ Spectrum MetadataIntegrator::Li(const Scene *scene,
             L =  Spectrum(isect.materialId);
             break;
         case DEPTH_MAP:
-            L = Spectrum(ray.maxt); // TODO: Does this work correctly?
+            L = Spectrum(ray.maxt);
+            // The above works because we set:
+            // r.maxt = thit in "GeometricPrimitive::Intersect"
             break;
         default:
             Error("No metadata integrator strategy specified!");

@@ -75,7 +75,6 @@ SpectralImageFilm::SpectralImageFilm(int xres, int yres, Filter *filt, const flo
     nCMCols = nSpectralSamples;
 }
 
-//Andy: this needs to be modified - modified
 void SpectralImageFilm::AddSample(const CameraSample &sample,
                           const Spectrum &L, const Ray &currentRay) {
     
@@ -198,6 +197,9 @@ void SpectralImageFilm::GetPixelExtent(int *xstart, int *xend,
 }
 
 //Andy added
+// Trisha Note: Andy says this was an early attempt to have matrix multiplies (e.g. for color conversion) directly in PBRT. He says "in retrospect it's kind of useless and tough to use."
+// TODO: Clear out conversion matrix stuff.
+
 void SpectralImageFilm::ParseConversionMatrix(string filename){
     string fn = AbsolutePath(ResolveFilename(filename));
     nCMRows = nSpectralSamples;
@@ -213,10 +215,15 @@ void SpectralImageFilm::ParseConversionMatrix(string filename){
         identity[i] = 0.f;
     for (int i = 0; i < nCMRows; i++)
         identity[i * nCMCols + i] = 1.f;
-
+    
+    
+    // Trisha: Get rid of annoying warnings for now. In the future we will remove all this conversion matrix stuff.
+    conversionMatrix = identity;
+    /*
     vector<float> vals;
     if (!ReadFloatFile(fn.c_str(), &vals)) {
-        Warning("Unable to read conversion matrix file \"%s\".  Using identity matrix.", 
+        
+         Warning("Unable to read conversion matrix file \"%s\".  Using identity matrix.",
                 fn.c_str());
         
         conversionMatrix = identity;
@@ -253,8 +260,10 @@ void SpectralImageFilm::ParseConversionMatrix(string filename){
         conversionMatrix[i-2-nSpectralSamples] = vals[i];
         if (debugMode)
             std::cout << "conversionMatrix[" << i-2 << "]=" << conversionMatrix[i-2-nCMRows] << "\t";
-    }    
+    }  
+     */
     return;
+    
 }
 
 //Andy changed
@@ -266,7 +275,7 @@ void SpectralImageFilm::WriteImage(float splatScale) {
     // Convert image to RGB and compute final pixel values
     int nPix = xPixelCount * yPixelCount;
     float *finalC = new float[nSpectralSamples * nPix];
-    float *finalZ = new float[nPix * 3];
+//    float *finalZ = new float[nPix * 3];
 
     int offset = 0;
     for (int x = 0; x < xPixelCount; ++x) {
@@ -277,10 +286,10 @@ void SpectralImageFilm::WriteImage(float splatScale) {
                 //*pixels(x,y).c[ind] contains computed spectral intensity of the image
 	            finalC[(y * xPixelCount + x)*nSpectralSamples + ind] = (*pixels)(x,y).c[ind];
 	        }
-            //depth map
-            finalZ[(y*xPixelCount + x) * 3] = (*pixels)(x,y).Z;  //Andy: do we need to do the weighting business?
-            finalZ[(y*xPixelCount + x) * 3 + 1] = (*pixels)(x,y).Z;  //do this 3 times so we have a grayscale .exr image
-            finalZ[(y*xPixelCount + x) * 3 + 2] = (*pixels)(x,y).Z;  
+//            //depth map
+//            finalZ[(y*xPixelCount + x) * 3] = (*pixels)(x,y).Z;  //Andy: do we need to do the weighting business?
+//            finalZ[(y*xPixelCount + x) * 3 + 1] = (*pixels)(x,y).Z;  //do this 3 times so we have a grayscale .exr image
+//            finalZ[(y*xPixelCount + x) * 3 + 2] = (*pixels)(x,y).Z;  
 
             // TODO: we may need to eliminate this "filtering" later
             float weightSum = (*pixels)(x, y).weightSum;  // Andy: will still need this, but need to make a for loop for all channels
@@ -291,13 +300,13 @@ void SpectralImageFilm::WriteImage(float splatScale) {
 		        {
 			        finalC[nSpectralSamples * offset + i] =  max(0.f, finalC[nSpectralSamples*offset + i  ]);
                     // No invWt here.
-                    // For our simulation, we simply add up all the "rays" that hit the sensor pixel - we don't do any normalization at all. In other words, the higher the number of pixel samples, the larger the pixel values will be. The spectrums given to the lights are all in relative values. In ISET, we scale the output pixel values to a mean luminance to get an actual physical value.
+                    //  Trisha Note: For our simulation, we simply add up all the "rays" that hit the sensor pixel - we don't do any normalization at all. In other words, the higher the number of pixel samples, the larger the pixel values will be. The spectrums given to the lights are all in relative values. In ISET, we scale the output pixel values to a mean luminance to get an actual physical value.
 		        }
                 
-                // Depth map weighting
-                finalZ[3 * offset ] = max(0.f, finalZ[3*offset] * invWt);
-                finalZ[3 * offset + 1] = max(0.f, finalZ[3*offset + 1] * invWt);
-                finalZ[3 * offset + 2] = max(0.f, finalZ[3*offset + 2] * invWt);
+//                // Depth map weighting
+//                finalZ[3 * offset ] = max(0.f, finalZ[3*offset] * invWt);
+//                finalZ[3 * offset + 1] = max(0.f, finalZ[3*offset + 1] * invWt);
+//                finalZ[3 * offset + 2] = max(0.f, finalZ[3*offset + 2] * invWt);
 
             }
             
@@ -335,41 +344,26 @@ void SpectralImageFilm::WriteImage(float splatScale) {
     
     //declare text file stream
     std::ofstream myfile;
+    // std::cout << "filename is " << filename << std::endl;
     int lastPos = filename.find_last_of(".");
     string newFileName = filename.substr(0, lastPos) + ".dat";
-    string newFileNameDM = filename.substr(0, lastPos) + "_DM.dat";
     
     myfile.open (newFileName.c_str());
 
-
     //print out the dimensions of the image    
     myfile << xPixelCount << " " << yPixelCount << " " << nCMRows << "\n";
-    //for (int i = 0; i < nCMRows; i++)
-    //    myfile << waveSpecify[i] << " ";
-    //myfile << "\n";
-
+    
     //print out field of view information
-    //float fieldOfView = 8;
     float d = sensorWidth;
     float fieldOfView = 2 * atan(d/(2 * focalLength)) / 3.1415926539 * 180;
     
-    //float aperture = 2;
-    //float focalLength = 50;
     myfile << focalLength << " " << fStop << " " << fieldOfView << "\n";
-
-std::cout << "outputing: " << focalLength << " " << fStop << " " << fieldOfView << "\n";
-    //std::cout << "
-
+    
     myfile.close();
 
     //open file for binary writing purposes
     FILE * spectralImageBin;
 	spectralImageBin = fopen(newFileName.c_str(), "a");
-
-    FILE * depthMapBin;
-    depthMapBin = fopen(newFileNameDM.c_str(), "a");
-
-    //TODO: perhaps dump the conversion matrix here
 
     //Write Binary image
     for (int i = 0; i < nCMRows; i++)
@@ -378,37 +372,15 @@ std::cout << "outputing: " << focalLength << " " << fStop << " " << fieldOfView 
 		{ 
             double r = (double)finalCMultiplied[nCMRows * j + i];
             fwrite((void*)(&r), sizeof(r), 1, spectralImageBin);
-
-            //myfile << finalCMultiplied[nCMRows * j + i];
-            //if (j < nPix - 1)
-            //    myfile << " ";
 		}
-        //myfile << "\n";
     }
 
     fclose(spectralImageBin);
-
-    //Write Binary depth map file
-    for (int j = 0; j < nPix; j++)
-    {
-        double r2 = (double)finalZ[3 * j];
-        fwrite((void*)(&r2), sizeof(r2), 1, depthMapBin);
-    }   
-    fclose(depthMapBin);
-
-    //::WriteImage(filename, rgb, NULL, xPixelCount, yPixelCount,
-    //             xResolution, yResolution, xPixelStart, yPixelStart);
-
-    //write .exr depth map!
-    string newFileNameDepth = filename.substr(0, lastPos) + "_depth.exr";
-    ::WriteImage(newFileNameDepth, finalZ, NULL, xPixelCount, yPixelCount,
-                xResolution, yResolution, xPixelStart, yPixelStart);
-
+    
     // Release temporary image memory
     delete[] finalC;
     delete[] finalCMultiplied;
-    delete[] finalZ;
-    //delete[] rgb;
+    // delete[] finalZ;
 }
 
 
@@ -515,7 +487,7 @@ SpectralImageFilm *CreateSpectralImageFilm(const ParamSet &params, Filter *filte
     // Trisha: Comment this out for now since it generates an annoying warning everytime we render. I don't think we use conversion matrix at all right now, so I guess this is a TODO.
     
      string conversionMatrixFilename = params.FindOneString("conversionmatrixfile", "");   //params contains all the parsed attributes of film... we now look for the "conversionmatrixfile" entry, which is a string
-     std::cout<< "\nconversionMatrixFilename: " << conversionMatrixFilename << "\n\n";
+     // std::cout<< "\nconversionMatrixFilename: " << conversionMatrixFilename << "\n\n";
     newFilm->ParseConversionMatrix(conversionMatrixFilename);
     
     
