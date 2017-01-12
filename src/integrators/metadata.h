@@ -52,7 +52,6 @@ public:
 private:
     // MetadataIntegrator Private Data
     MetadataStrategy strategy;
-    string filename;
 };
 
 

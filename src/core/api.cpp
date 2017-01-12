@@ -1219,7 +1219,6 @@ void pbrtWorldEnd() {
     
     // Get filename from metadataIntegrator
     const ParamSet &paramSet = renderOptions->SurfIntegratorParams;
-    //string filename = paramSet.FindOneString("filename", "metadata.txt");
     
     // Filename will be the same as the output image filename
     string filename = PbrtOptions.imageFile;
