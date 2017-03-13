@@ -503,7 +503,6 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
     
     startingPoint.x = -((sample.imageX) - film->xResolution/2.f - .25)/(film->xResolution/2.f);  //potential rounding/alignment problem here
     startingPoint.y = ((sample.imageY) - film->yResolution/2.f - .25)/(film->yResolution/2.f);
-    
     startingPoint.z = -filmDistance;
     
     //cout << "startingPoint.z: " << startingPoint.z;
@@ -1151,6 +1150,9 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
         }
         //------------end diffraction-----------------
     }
+    
+    // Set the origin of the ray to be the center of the lens element closest to the center. In this case, this is always (0,0,0) in the camera coordinate space. This is primarily to have a correct depth map calculation.
+    ray->o = Point(0,0,0);
     
     ray->time = Lerp(sample.time, ShutterOpen, ShutterClose);
     CameraToWorld(*ray, ray);

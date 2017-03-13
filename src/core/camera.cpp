@@ -53,15 +53,12 @@ float Camera::GenerateRayDifferential(const CameraSample &sample,
                                       RayDifferential *rd) const {
     
     float tempWavelength = rd->wavelength;   //Andy added to retain wavelength information
-//std::cout << "tempWavelength: " << tempWavelength << "\n";
-    rd->wavelength = tempWavelength;   //Andy added to retain wavelength information    
+    rd->wavelength = tempWavelength;   //Andy added to retain wavelength information
     float wt = GenerateRay(sample, rd);
-    //std::cout << "rd->wavelength: " << rd->wavelength << "\n";
 
     // Find ray after shifting one pixel in the $x$ direction
     CameraSample sshift = sample;
     ++(sshift.imageX);
-
     
     Ray rx;
     rx.wavelength = tempWavelength;   //Andy added to retain wavelength information

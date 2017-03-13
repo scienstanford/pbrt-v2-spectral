@@ -52,10 +52,21 @@ Spectrum MetadataIntegrator::Li(const Scene *scene,
             L =  Spectrum(isect.materialId);
             break;
         case DEPTH_MAP:
-            L = Spectrum(ray.maxt);
-            // The above works because we set:
-            // r.maxt = thit in "GeometricPrimitive::Intersect"
+        {
+            
+            Point intersectPoint = isect.dg.p;
+            Point rayOrigin = ray.o; // In a pinhole camera, this is the pinhole. In realistic diffraction, it's the point on the film (?)
+            Vector toIntersect = intersectPoint - rayOrigin;
+            float distance = sqrt(toIntersect[0]*toIntersect[0] + toIntersect[1]*toIntersect[1] + toIntersect[2]*toIntersect[2]);
+            L = Spectrum(distance);
+            
+            // DEBUG
+//            std::cout << "Intersect point was (" << intersectPoint[0] << "," << intersectPoint[1] << "," << intersectPoint[2] << ")" << std::endl;
+//            std::cout << "Ray origin was (" << ray.o[0] << "," << ray.o[1]  << "," << ray.o[2] <<  ")" << std::endl;
+//            std::cout << "Distance was " << distance << std::endl;
+
             break;
+        }
         default:
             Error("No metadata integrator strategy specified!");
             break;
