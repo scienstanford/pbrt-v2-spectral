@@ -28,7 +28,7 @@
 #ifndef PBRT_RENDERERS_CamerasRenderer_H
 #define PBRT_RENDERERS_CamerasRenderer_H
 
-// renderers/CamerasRenderer.h*
+// renderers/camerasrenderer.h*
 #include "pbrt.h"
 #include "renderer.h"
 #include "parallel.h"

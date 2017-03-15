@@ -32,7 +32,7 @@
 
 // renderers/CamerasRenderer.cpp*
 #include "stdafx.h"
-#include "renderers/CamerasRenderer.h"
+#include "renderers/camerasrenderer.h"
 #include "scene.h"
 #include "film.h"
 #include "volume.h"
