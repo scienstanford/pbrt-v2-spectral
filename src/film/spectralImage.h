@@ -58,6 +58,7 @@ public:
     void SetFStop(float inputFStop);        //Andy: added these for lens information and FOV output to ISET
     void SetFocalLength(float inputFocalLength);
     void SetSensorWidth(float sensWidth); //need this for FOV
+    
 private:
     //Andy added to allow for conversion matrix file parsing
     float * conversionMatrix;     //actual matrix storage
@@ -68,7 +69,6 @@ private:
     // SpectralImageFilm Private Data
     Filter *filter;
     float cropWindow[4];
-    string filename;
     int xPixelStart, yPixelStart, xPixelCount, yPixelCount;
     //Andy: modified this to allow for multispectral
     struct Pixel {

@@ -36,10 +36,9 @@
 // SpectralImageNoCameraFilm Method Definitions
 SpectralImageNoCameraFilm::SpectralImageNoCameraFilm(int xres, int yres, Filter *filt, const float crop[4],
                      const string &fn, bool openWindow)
-    : Film(xres, yres) {
+    : Film(xres, yres,fn) { // fn added by Trisha
     filter = filt;
     memcpy(cropWindow, crop, 4 * sizeof(float));
-    filename = fn;
     // Compute film image extent
     xPixelStart = Ceil2Int(xResolution * cropWindow[0]);
     xPixelCount = max(1, Ceil2Int(xResolution * cropWindow[1]) - xPixelStart);
@@ -348,8 +347,8 @@ void SpectralImageNoCameraFilm::WriteImage(float splatScale) {
 
     //declare text file stream
     std::ofstream myfile;
-    int lastPos = filename.find_last_of(".");
-    string newFileName = filename.substr(0, lastPos) + ".dat";
+    int lastPos = imageOutputName.find_last_of(".");
+    string newFileName = imageOutputName.substr(0, lastPos) + ".dat";
 
     
     myfile.open (newFileName.c_str());
@@ -366,9 +365,6 @@ void SpectralImageNoCameraFilm::WriteImage(float splatScale) {
     //open file for binary writing purposes
     FILE * spectralImageBin;
 	spectralImageBin = fopen(newFileName.c_str(), "a");
-
-
-    //TODO: perhaps dump the conversion matrix here
 
     //Write Binary image
     for (int i = 0; i < nCMRows; i++)
@@ -390,7 +386,7 @@ void SpectralImageNoCameraFilm::WriteImage(float splatScale) {
     //             xResolution, yResolution, xPixelStart, yPixelStart);
 
     //write .exr depth map!
-    string newFileNameDepth = filename.substr(0, lastPos) + "_depth.exr";
+    string newFileNameDepth = imageOutputName.substr(0, lastPos) + "_depth.exr";
     ::WriteImage(newFileNameDepth, finalZ, NULL, xPixelCount, yPixelCount,
                 xResolution, yResolution, xPixelStart, yPixelStart);
 
@@ -399,6 +395,10 @@ void SpectralImageNoCameraFilm::WriteImage(float splatScale) {
     delete[] finalCMultiplied;
     delete[] finalZ;
     //delete[] rgb;
+    
+    // Added by Trisha
+    // Clear pixels, in case we're doing another render with the same film (e.g. camerasrenderer)
+    pixels = new BlockedArray<Pixel>(xPixelCount, yPixelCount);
 }
 
 
@@ -415,6 +415,7 @@ SpectralImageNoCameraFilm *CreateSpectralImageNoCameraFilm(const ParamSet &param
 #else
         filename = "pbrt.tga";
 #endif
+
 
     int xres = params.FindOneInt("xresolution", 640);
     int yres = params.FindOneInt("yresolution", 480);     

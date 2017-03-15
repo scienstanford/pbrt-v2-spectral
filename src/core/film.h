@@ -35,8 +35,8 @@
 class Film {
 public:
     // Film Interface
-    Film(int xres, int yres)
-        : xResolution(xres), yResolution(yres) { }
+    Film(int xres, int yres, string name)
+        : xResolution(xres), yResolution(yres), imageOutputName(name) { } // imageOutputName Added by Trisha
     virtual ~Film();
     virtual void AddSample(const CameraSample &sample,
                            const Spectrum &L, const Ray &currentRay) = 0;
@@ -50,6 +50,7 @@ public:
 
     // Film Public Data
     const int xResolution, yResolution;
+    string imageOutputName; // Added by Trisha
 };
 
 

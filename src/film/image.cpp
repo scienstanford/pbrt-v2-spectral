@@ -32,10 +32,9 @@
 // ImageFilm Method Definitions
 ImageFilm::ImageFilm(int xres, int yres, Filter *filt, const float crop[4],
                      const string &fn, bool openWindow)
-    : Film(xres, yres) {
+    : Film(xres, yres, fn) { // fn added by Trisha
     filter = filt;
     memcpy(cropWindow, crop, 4 * sizeof(float));
-    filename = fn;
     // Compute film image extent
     xPixelStart = Ceil2Int(xResolution * cropWindow[0]);
     xPixelCount = max(1, Ceil2Int(xResolution * cropWindow[1]) - xPixelStart);
@@ -197,11 +196,17 @@ void ImageFilm::WriteImage(float splatScale) {
     }
 
     // Write RGB image
-    ::WriteImage(filename, rgb, NULL, xPixelCount, yPixelCount,
+    // Changed by Trisha from filename to imageOutputName
+    ::WriteImage(imageOutputName, rgb, NULL, xPixelCount, yPixelCount,
                  xResolution, yResolution, xPixelStart, yPixelStart);
 
     // Release temporary image memory
     delete[] rgb;
+    
+    // Added by Trisha
+    // Clear pixels, in case we're doing another render with the same film (e.g. camerasrenderer)
+    pixels = new BlockedArray<Pixel>(xPixelCount, yPixelCount);
+    
 }
 
 

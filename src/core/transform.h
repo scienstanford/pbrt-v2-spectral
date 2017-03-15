@@ -310,9 +310,11 @@ public:
     bool HasScale() const { return startTransform->HasScale() || endTransform->HasScale(); }
 private:
     // AnimatedTransform Private Data
-    const float startTime, endTime;
+    // const float startTime, endTime;
+    float startTime, endTime; // Trisha: Made this no longer a constant so we can change CameraToWorld in camerasrenderer
     const Transform *startTransform, *endTransform;
-    const bool actuallyAnimated;
+    // const bool actuallyAnimated;
+    bool actuallyAnimated; // Trisha: Made this no longer a constant so we can change CameraToWorld in camerasrenderer
     Vector T[2];
     Quaternion R[2];
     Matrix4x4 S[2];

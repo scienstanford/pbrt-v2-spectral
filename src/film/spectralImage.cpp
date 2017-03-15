@@ -1,24 +1,24 @@
 
 /*
-    pbrt source code Copyright(c) 1998-2010 Matt Pharr and Greg Humphreys.
-
-    This file is part of pbrt.
-
-    pbrt is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.  Note that the text contents of
-    the book "Physically Based Rendering" are *not* licensed under the
-    GNU GPL.
-
-    pbrt is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+ pbrt source code Copyright(c) 1998-2010 Matt Pharr and Greg Humphreys.
+ 
+ This file is part of pbrt.
+ 
+ pbrt is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.  Note that the text contents of
+ the book "Physically Based Rendering" are *not* licensed under the
+ GNU GPL.
+ 
+ pbrt is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ 
  */
 
 
@@ -38,34 +38,33 @@
 
 // SpectralImageFilm Method Definitions
 SpectralImageFilm::SpectralImageFilm(int xres, int yres, Filter *filt, const float crop[4],
-                     const string &fn, bool openWindow)
-    : Film(xres, yres) {
+                                     const string &fn, bool openWindow)
+: Film(xres, yres, fn) { // fn added by Trisha
     filter = filt;
     memcpy(cropWindow, crop, 4 * sizeof(float));
-    filename = fn;
     // Compute film image extent
     xPixelStart = Ceil2Int(xResolution * cropWindow[0]);
     xPixelCount = max(1, Ceil2Int(xResolution * cropWindow[1]) - xPixelStart);
     yPixelStart = Ceil2Int(yResolution * cropWindow[2]);
     yPixelCount = max(1, Ceil2Int(yResolution * cropWindow[3]) - yPixelStart);
-
+    
     // Allocate film image storage
     pixels = new BlockedArray<Pixel>(xPixelCount, yPixelCount);
-
+    
     // Precompute filter weight table
 #define FILTER_TABLE_SIZE 16
     filterTable = new float[FILTER_TABLE_SIZE * FILTER_TABLE_SIZE];
     float *ftp = filterTable;
     for (int y = 0; y < FILTER_TABLE_SIZE; ++y) {
         float fy = ((float)y + .5f) *
-                   filter->yWidth / FILTER_TABLE_SIZE;
+        filter->yWidth / FILTER_TABLE_SIZE;
         for (int x = 0; x < FILTER_TABLE_SIZE; ++x) {
             float fx = ((float)x + .5f) *
-                       filter->xWidth / FILTER_TABLE_SIZE;
+            filter->xWidth / FILTER_TABLE_SIZE;
             *ftp++ = filter->Evaluate(fx, fy);
         }
     }
-
+    
     // Possibly open window for image display
     if (openWindow || PbrtOptions.openWindow) {
         Warning("Support for opening image display window not available in this build.");
@@ -76,7 +75,7 @@ SpectralImageFilm::SpectralImageFilm(int xres, int yres, Filter *filt, const flo
 }
 
 void SpectralImageFilm::AddSample(const CameraSample &sample,
-                          const Spectrum &L, const Ray &currentRay) {
+                                  const Spectrum &L, const Ray &currentRay) {
     
     
     // Compute sample's raster extent
@@ -92,19 +91,14 @@ void SpectralImageFilm::AddSample(const CameraSample &sample,
     y1 = min(y1, yPixelStart + yPixelCount - 1);
     if ((x1-x0) < 0 || (y1-y0) < 0)
     {
-        PBRT_SAMPLE_OUTSIDE_IMAGE_EXTENT(const_cast<CameraSample *>(&sample));
+        PBRT_SAMPLE_OUTSIDE_IMAGE_EXTENT(con st_cast<CameraSample *>(&sample));
         return;
     }
-
-    // Loop over filter support and add sample to pixel arrays
-    //float xyz[3];
-    //L.ToXYZ(xyz);
     
     //Andy: put in spectrum data here
     float origC[nSpectralSamples];
     L.GetOrigC(origC);
-
-
+    
     // Precompute $x$ and $y$ filter table offsets
     int *ifx = ALLOCA(int, x1 - x0 + 1);
     for (int x = x0; x <= x1; ++x) {
@@ -119,39 +113,42 @@ void SpectralImageFilm::AddSample(const CameraSample &sample,
         ify[y-y0] = min(Floor2Int(fy), FILTER_TABLE_SIZE-1);
     }
     bool syncNeeded = (filter->xWidth > 0.5f || filter->yWidth > 0.5f);
+    
     for (int y = y0; y <= y1; ++y) {
         for (int x = x0; x <= x1; ++x) {
+            
             // Evaluate filter value at $(x,y)$ pixel
             int offset = ify[y-y0]*FILTER_TABLE_SIZE + ifx[x-x0];
             float filterWt = filterTable[offset];
-
+            
             // Update pixel values with filtered sample contribution
             Pixel &pixel = (*pixels)(x - xPixelStart, y - yPixelStart);
             if (!syncNeeded) {
-                /*pixel.Lxyz[0] += filterWt * xyz[0];
-                pixel.Lxyz[1] += filterWt * xyz[1];
-                pixel.Lxyz[2] += filterWt * xyz[2];*/
-		        for (int i = 0; i < nSpectralSamples; i++)  //fixed some of the brackets... need to check
+                
+                // Loop through all wavelengths
+                for (int i = 0; i < nSpectralSamples; i++)
                 {
-			        pixel.c[i] += filterWt * origC[i];                }
+                    pixel.c[i] += filterWt * origC[i]; // Multiply by filter weight
+                }
                 pixel.weightSum += filterWt;
             }
             else {
-                    // Safely update _Lxyz_ and _weightSum_ even with concurrency
-		        for (int i = 0; i < nSpectralSamples; i++)
-                {   
-			        AtomicAdd(&pixel.c[i], filterWt * origC[i]);
+                // Safely update _Lxyz_ and _weightSum_ even with concurrency
+                // (These atomic add operations have something to do with safe memory allocation when using multiple threads. More info on p.1036 in the PBRT textbook.)
+                for (int i = 0; i < nSpectralSamples; i++)
+                {
+                    AtomicAdd(&pixel.c[i], filterWt * origC[i]);
                 }
                 AtomicAdd(&pixel.weightSum, filterWt);
             }
+            
+            // Thi is Andy's old way of doing depth.
+            // Why multiply by the filterWt?
             pixel.Z += currentRay.maxt * filterWt;    //add the depth map data member to a pixel - depth is inherently stored in Ray
-            //pixel.Z += currentRay.maxt;    //add the depth map data member to a pixel - depth is inherently stored in Ray
-            // std::cout << pixel.Z << std::endl;
+            
         }
     }
 
-   // Pixel &pixel = (*pixels)((x0 + x1)/2, (y0 + y1)/2);
-   // pixel.Z = currentRay.maxt;    //add the depth map data member to a pixel - depth is inherently stored in Ray
 }
 
 
@@ -163,25 +160,25 @@ void SpectralImageFilm::Splat(const CameraSample &sample, const Spectrum &L) {
         Warning("SpectralImageFilm ignoring splatted spectrum with NaN values");
         return;
     }
-
+    
     int x = Floor2Int(sample.imageX), y = Floor2Int(sample.imageY);
     if (x < xPixelStart || x - xPixelStart >= xPixelCount ||
         y < yPixelStart || y - yPixelStart >= yPixelCount) return;
     Pixel &pixel = (*pixels)(x - xPixelStart, y - yPixelStart);
-
-	for (int i = 0; i < nSpectralSamples; i++)
-	{
-		AtomicAdd(&pixel.splatC[i], pixel.splatC[i]);
-	}
+    
+    for (int i = 0; i < nSpectralSamples; i++)
+    {
+        AtomicAdd(&pixel.splatC[i], pixel.splatC[i]);
+    }
 }
 
 
 void SpectralImageFilm::GetSampleExtent(int *xstart, int *xend,
-                                int *ystart, int *yend) const {
+                                        int *ystart, int *yend) const {
     *xstart = Floor2Int(xPixelStart + 0.5f - filter->xWidth);
     *xend   = Floor2Int(xPixelStart + 0.5f + xPixelCount  +
                         filter->xWidth);
-
+    
     *ystart = Floor2Int(yPixelStart + 0.5f - filter->yWidth);
     *yend   = Floor2Int(yPixelStart + 0.5f + yPixelCount +
                         filter->yWidth);
@@ -189,7 +186,7 @@ void SpectralImageFilm::GetSampleExtent(int *xstart, int *xend,
 
 
 void SpectralImageFilm::GetPixelExtent(int *xstart, int *xend,
-                               int *ystart, int *yend) const {
+                                       int *ystart, int *yend) const {
     *xstart = xPixelStart;
     *xend   = xPixelStart + xPixelCount;
     *ystart = yPixelStart;
@@ -220,47 +217,47 @@ void SpectralImageFilm::ParseConversionMatrix(string filename){
     // Trisha: Get rid of annoying warnings for now. In the future we will remove all this conversion matrix stuff.
     conversionMatrix = identity;
     /*
-    vector<float> vals;
-    if (!ReadFloatFile(fn.c_str(), &vals)) {
-        
-         Warning("Unable to read conversion matrix file \"%s\".  Using identity matrix.",
-                fn.c_str());
-        
-        conversionMatrix = identity;
-        return;
-    }
-    // TODO: consider list of wavelengths
-    if (vals.size() < 2 || ((vals.size() - 2 - nCMRows) % nSpectralSamples != 0))  //changed to consider the CMRows amount of wave specifications
-    {
-        Warning("Incorrect conversion matrix file format (wrong number of matrix elements! Using identity matrix.");
-        conversionMatrix = identity;
-        return;
-    }
-    nCMRows = vals[0];
-    nCMCols = vals[1];
-
-    waveSpecify = new float[nCMRows];
-    //read wavelength representation data
-    for (int i = 2; i < 2  + nCMRows; i++)
-    {
-        waveSpecify[i-2] = vals[i];
-    }    
-
-    if (nCMRows * nCMCols != vals.size() -2 - nCMRows || nCMCols != nSpectralSamples)
-    {
-        Warning("Incorrect conversion matrix file format (wrong number of matrix elements! Using identity matrix.");
-        conversionMatrix = identity;
-        return;
-    }    
-
-    conversionMatrix = new float[nCMCols * nCMRows];
-
-    for (int i = 2 + nSpectralSamples; i< vals.size(); i++)
-    {
-        conversionMatrix[i-2-nSpectralSamples] = vals[i];
-        if (debugMode)
-            std::cout << "conversionMatrix[" << i-2 << "]=" << conversionMatrix[i-2-nCMRows] << "\t";
-    }  
+     vector<float> vals;
+     if (!ReadFloatFile(fn.c_str(), &vals)) {
+     
+     Warning("Unable to read conversion matrix file \"%s\".  Using identity matrix.",
+     fn.c_str());
+     
+     conversionMatrix = identity;
+     return;
+     }
+     // TODO: consider list of wavelengths
+     if (vals.size() < 2 || ((vals.size() - 2 - nCMRows) % nSpectralSamples != 0))  //changed to consider the CMRows amount of wave specifications
+     {
+     Warning("Incorrect conversion matrix file format (wrong number of matrix elements! Using identity matrix.");
+     conversionMatrix = identity;
+     return;
+     }
+     nCMRows = vals[0];
+     nCMCols = vals[1];
+     
+     waveSpecify = new float[nCMRows];
+     //read wavelength representation data
+     for (int i = 2; i < 2  + nCMRows; i++)
+     {
+     waveSpecify[i-2] = vals[i];
+     }
+     
+     if (nCMRows * nCMCols != vals.size() -2 - nCMRows || nCMCols != nSpectralSamples)
+     {
+     Warning("Incorrect conversion matrix file format (wrong number of matrix elements! Using identity matrix.");
+     conversionMatrix = identity;
+     return;
+     }
+     
+     conversionMatrix = new float[nCMCols * nCMRows];
+     
+     for (int i = 2 + nSpectralSamples; i< vals.size(); i++)
+     {
+     conversionMatrix[i-2-nSpectralSamples] = vals[i];
+     if (debugMode)
+     std::cout << "conversionMatrix[" << i-2 << "]=" << conversionMatrix[i-2-nCMRows] << "\t";
+     }
      */
     return;
     
@@ -268,60 +265,58 @@ void SpectralImageFilm::ParseConversionMatrix(string filename){
 
 //Andy changed
 void SpectralImageFilm::WriteImage(float splatScale) {
-
-
-    //Andy: will need to multiply by the conversion matrix for final output!
-
+    
     // Convert image to RGB and compute final pixel values
     int nPix = xPixelCount * yPixelCount;
     float *finalC = new float[nSpectralSamples * nPix];
-//    float *finalZ = new float[nPix * 3];
-
+    
     int offset = 0;
     for (int x = 0; x < xPixelCount; ++x) {
         for (int y = 0; y < yPixelCount; ++y) {
             
-	        for (int ind = 0; ind < nSpectralSamples; ind++)
-	        {
-                //*pixels(x,y).c[ind] contains computed spectral intensity of the image
-	            finalC[(y * xPixelCount + x)*nSpectralSamples + ind] = (*pixels)(x,y).c[ind];
-	        }
-//            //depth map
-//            finalZ[(y*xPixelCount + x) * 3] = (*pixels)(x,y).Z;  //Andy: do we need to do the weighting business?
-//            finalZ[(y*xPixelCount + x) * 3 + 1] = (*pixels)(x,y).Z;  //do this 3 times so we have a grayscale .exr image
-//            finalZ[(y*xPixelCount + x) * 3 + 2] = (*pixels)(x,y).Z;  
-
+            for (int ind = 0; ind < nSpectralSamples; ind++)
+            {
+                finalC[(y * xPixelCount + x)*nSpectralSamples + ind] = (*pixels)(x,y).c[ind];
+            }
+            
             // TODO: we may need to eliminate this "filtering" later
             float weightSum = (*pixels)(x, y).weightSum;  // Andy: will still need this, but need to make a for loop for all channels
             if (weightSum != 0.f) {
                 float invWt = 1.f / weightSum;
-
-		        for (int i = 0; i < nSpectralSamples; i++)
-		        {
-			        finalC[nSpectralSamples * offset + i] =  max(0.f, finalC[nSpectralSamples*offset + i  ]);
+                
+                for (int i = 0; i < nSpectralSamples; i++)
+                {
+                    finalC[nSpectralSamples * offset + i] =  max(0.f, finalC[nSpectralSamples*offset + i  ]);
+                    
+                    // TODO: We need invWt here if it's metadata!
+                    // How do we know if its the metadata renderer?
+                    
+                    // DEBUG
+                    //std::cout << "finalC*invWt = " << finalC[nSpectralSamples * offset + i]*invWt << std::endl;
+                    
                     // No invWt here.
                     //  Trisha Note: For our simulation, we simply add up all the "rays" that hit the sensor pixel - we don't do any normalization at all. In other words, the higher the number of pixel samples, the larger the pixel values will be. The spectrums given to the lights are all in relative values. In ISET, we scale the output pixel values to a mean luminance to get an actual physical value.
-		        }
+                }
                 
-//                // Depth map weighting
-//                finalZ[3 * offset ] = max(0.f, finalZ[3*offset] * invWt);
-//                finalZ[3 * offset + 1] = max(0.f, finalZ[3*offset + 1] * invWt);
-//                finalZ[3 * offset + 2] = max(0.f, finalZ[3*offset + 2] * invWt);
-
+                //                // Depth map weighting
+                //                finalZ[3 * offset ] = max(0.f, finalZ[3*offset] * invWt);
+                //                finalZ[3 * offset + 1] = max(0.f, finalZ[3*offset + 1] * invWt);
+                //                finalZ[3 * offset + 2] = max(0.f, finalZ[3*offset + 2] * invWt);
+                
             }
             
-
+            
             //Add splat value at pixel
-	        float * splatC = (*pixels)(x, y).splatC;
-
-	        for (int i = 0; i < nSpectralSamples; i++)
-	        {
-	        	finalC[nSpectralSamples * offset + i] += splatScale * splatC[nSpectralSamples];
-	        }
+            float * splatC = (*pixels)(x, y).splatC;
+            
+            for (int i = 0; i < nSpectralSamples; i++)
+            {
+                finalC[nSpectralSamples * offset + i] += splatScale * splatC[nSpectralSamples];
+            }
             ++offset;
         }
     }
-
+    
     
     float *finalCMultiplied = new float[nCMRows * nPix];
     //Andy added: multiply by conversion matrix to produce proper output
@@ -338,19 +333,17 @@ void SpectralImageFilm::WriteImage(float splatScale) {
                 }
                 finalCMultiplied[nCMRows * (x *  yPixelCount + y) + row] = tempSum;  //check this later
             }
-
+            
         }
-    }    
+    }
     
-    //declare text file stream
+    //Write to file
     std::ofstream myfile;
-    // std::cout << "filename is " << filename << std::endl;
-    int lastPos = filename.find_last_of(".");
-    string newFileName = filename.substr(0, lastPos) + ".dat";
-    
+    int lastPos = imageOutputName.find_last_of(".");
+    string newFileName = imageOutputName.substr(0, lastPos) + ".dat";
     myfile.open (newFileName.c_str());
-
-    //print out the dimensions of the image    
+    
+    //print out the dimensions of the image
     myfile << xPixelCount << " " << yPixelCount << " " << nCMRows << "\n";
     
     //print out field of view information
@@ -360,89 +353,93 @@ void SpectralImageFilm::WriteImage(float splatScale) {
     myfile << focalLength << " " << fStop << " " << fieldOfView << "\n";
     
     myfile.close();
-
+    
     //open file for binary writing purposes
     FILE * spectralImageBin;
-	spectralImageBin = fopen(newFileName.c_str(), "a");
-
+    spectralImageBin = fopen(newFileName.c_str(), "a");
+    
     //Write Binary image
     for (int i = 0; i < nCMRows; i++)
     {
-		for (int j = 0; j < nPix; j++)
-		{ 
+        for (int j = 0; j < nPix; j++)
+        {
             double r = (double)finalCMultiplied[nCMRows * j + i];
+            // DEBUG
+            //std::cout << "r = " << r << std::endl;
             fwrite((void*)(&r), sizeof(r), 1, spectralImageBin);
-		}
+        }
     }
-
+    
     fclose(spectralImageBin);
     
     // Release temporary image memory
     delete[] finalC;
     delete[] finalCMultiplied;
-    // delete[] finalZ;
+    
+    // Clear pixels, in case we're doing another render with the same film (e.g. camerasrenderer)
+    pixels = new BlockedArray<Pixel>(xPixelCount, yPixelCount);
 }
 
 
 void SpectralImageFilm::UpdateDisplay(int x0, int y0, int x1, int y1,
-    float splatScale) {
+                                      float splatScale) {
 }
 
 //Andy: added this additional construction function to allow for camera pointer - for FOV calculations
-SpectralImageFilm *CreateSpectralImageFilm(const ParamSet &params, Filter *filter, Camera * baseCamera) 
+SpectralImageFilm *CreateSpectralImageFilm(const ParamSet &params, Filter *filter, Camera * baseCamera)
 {
-
+    
     
     // ANDY: THIS WILL REQUIRE SOME RETHINKING FOR MAXIMUM COMPATIBILITY!!!    ... but works for now.  but what if baseCamera is not a compatible type?!
     
-	//baseCamera contains information about the camera: information such as focal length is very important to calculate field of view.
-	//float focalLength = baseCamera->focalLength
-	//also need film dimensions
-	//float horizontalFOV = 2 * arctan(d/2f)
-	
-	//RealisticDiffractionCamera* 
+    //baseCamera contains information about the camera: information such as focal length is very important to calculate field of view.
+    //float focalLength = baseCamera->focalLength
+    //also need film dimensions
+    //float horizontalFOV = 2 * arctan(d/2f)
+    
+    //RealisticDiffractionCamera*
     //dynamic_cast<RealisticDiffractionCamera*> (baseCamera);
-	
-	string myType = typeid(*baseCamera).name();
+    
+    string myType = typeid(*baseCamera).name();
     std::cout << "typeOfCamera: " << myType << "\n\n";
-
+    
     
     string comparison("26RealisticDiffractionCamera"); //("17PerspectiveCamera"); // ("26RealisticDiffractionCamera");	//**IF COMPARISON IS 0, then strings are THE SAME!!!
     std::cout << "comparison: " << myType.compare(comparison)  << "\n\n";
-	
+    
     std::cout << "\n\nin constructor!!\n\n";
     float tfocalLength = 0;
     float tfStop = 0;
     float tSensWidth = 0;
-
-	if (myType.compare(comparison) == 0)
-	{
-        tfocalLength = ((RealisticDiffractionCamera*)baseCamera)->getFocalLength();  // NEED TO ADD THIS STILL  
-        tfStop = ((RealisticDiffractionCamera*)baseCamera)->getFStop();  //NEED TO ADD THIS STILL  
-        tSensWidth = ((RealisticDiffractionCamera*)baseCamera)->getSensorWidth(); 
-
+    
+    if (myType.compare(comparison) == 0)
+    {
+        tfocalLength = ((RealisticDiffractionCamera*)baseCamera)->getFocalLength();  // NEED TO ADD THIS STILL
+        tfStop = ((RealisticDiffractionCamera*)baseCamera)->getFStop();  //NEED TO ADD THIS STILL
+        tSensWidth = ((RealisticDiffractionCamera*)baseCamera)->getSensorWidth();
+        
         std::cout << "focalLength: " << tfocalLength;
         std::cout << "\nfStop: " << tfStop << "\n";
-	}
-	else
-	{
-	    std::cout << "no focal length or fStop information for this camera!\n";
-	    std::cout << "myType: " << myType << "\n";
-	}
-	
+    }
+    else
+    {
+        std::cout << "no focal length or fStop information for this camera!\n";
+        std::cout << "myType: " << myType << "\n";
+    }
     
-	SpectralImageFilm * newImageFilm = CreateSpectralImageFilm(params, filter);
-	newImageFilm->SetFStop(tfStop);
-	newImageFilm->SetFocalLength(tfocalLength);
-	newImageFilm->SetSensorWidth(tSensWidth);
+    
+    SpectralImageFilm * newImageFilm = CreateSpectralImageFilm(params, filter);
+    newImageFilm->SetFStop(tfStop);
+    newImageFilm->SetFocalLength(tfocalLength);
+    newImageFilm->SetSensorWidth(tSensWidth);
     return newImageFilm;
 }
 
 
- //Andy: added these for lens information and FOV output to ISET
+//Andy: added these for lens information and FOV output to ISET
 void SpectralImageFilm::SetFStop(float inputFStop)
 {
-    fStop = inputFStop;       
+    fStop = inputFStop;
 }
 void SpectralImageFilm::SetFocalLength(float inputFocalLength)
 {
@@ -461,13 +458,13 @@ SpectralImageFilm *CreateSpectralImageFilm(const ParamSet &params, Filter *filte
 #ifdef PBRT_HAS_OPENEXR
         filename = "pbrt.exr";
 #else
-        filename = "pbrt.tga";
+    filename = "pbrt.tga";
 #endif
-
+    
     int xres = params.FindOneInt("xresolution", 640);
-    int yres = params.FindOneInt("yresolution", 480);     
-
-    if (PbrtOptions.quickRender) xres = max(1, xres / 4);    
+    int yres = params.FindOneInt("yresolution", 480);
+    
+    if (PbrtOptions.quickRender) xres = max(1, xres / 4);
     if (PbrtOptions.quickRender) yres = max(1, yres / 4);
     bool openwin = params.FindOneBool("display", false);
     float crop[4] = { 0, 1, 0, 1 };
@@ -479,15 +476,15 @@ SpectralImageFilm *CreateSpectralImageFilm(const ParamSet &params, Filter *filte
         crop[2] = Clamp(min(cr[2], cr[3]), 0., 1.);
         crop[3] = Clamp(max(cr[2], cr[3]), 0., 1.);
     }
-
+    
     
     //Andy changed to allow for parsing of conversionmatrixfile name
     SpectralImageFilm * newFilm = new SpectralImageFilm(xres, yres, filter, crop, filename, openwin);
     
     // Trisha: Comment this out for now since it generates an annoying warning everytime we render. I don't think we use conversion matrix at all right now, so I guess this is a TODO.
     
-     string conversionMatrixFilename = params.FindOneString("conversionmatrixfile", "");   //params contains all the parsed attributes of film... we now look for the "conversionmatrixfile" entry, which is a string
-     // std::cout<< "\nconversionMatrixFilename: " << conversionMatrixFilename << "\n\n";
+    string conversionMatrixFilename = params.FindOneString("conversionmatrixfile", "");   //params contains all the parsed attributes of film... we now look for the "conversionmatrixfile" entry, which is a string
+    // std::cout<< "\nconversionMatrixFilename: " << conversionMatrixFilename << "\n\n";
     newFilm->ParseConversionMatrix(conversionMatrixFilename);
     
     

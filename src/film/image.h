@@ -56,7 +56,6 @@ private:
     // ImageFilm Private Data
     Filter *filter;
     float cropWindow[4];
-    string filename;
     int xPixelStart, yPixelStart, xPixelCount, yPixelCount;
     struct Pixel {
         Pixel() {

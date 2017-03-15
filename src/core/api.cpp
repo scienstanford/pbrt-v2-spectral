@@ -102,6 +102,7 @@
 #include "renderers/metropolis.h"
 #include "renderers/samplerrenderer.h"
 #include "renderers/spectralrenderer.h" // Added by Trisha
+#include "renderers/camerasrenderer.h" // Added by Trisha
 #include "renderers/surfacepoints.h"
 #include "samplers/adaptive.h"
 #include "samplers/bestcandidate.h"
@@ -775,6 +776,10 @@ void pbrtTransform(float tr[16]) {
 
 void pbrtConcatTransform(float tr[16]) {
     VERIFY_INITIALIZED("ConcatTransform");
+    // DEBUG
+//    for(int i = 0; i <16; i++){
+//        std::cout << tr[i] <<std::endl;
+//    }
     FOR_ACTIVE_TRANSFORMS(curTransform[i] = curTransform[i] * Transform(
                 Matrix4x4(tr[0], tr[4], tr[8], tr[12],
                           tr[1], tr[5], tr[9], tr[13],
@@ -803,6 +808,7 @@ void pbrtLookAt(float ex, float ey, float ez, float lx, float ly,
                                     "to the start of your scene file."); break; })
     FOR_ACTIVE_TRANSFORMS(curTransform[i] =
         curTransform[i] * LookAt(Point(ex, ey, ez), Point(lx, ly, lz), Vector(ux, uy, uz));)
+    
 }
 
 
@@ -1357,13 +1363,18 @@ Renderer *RenderOptions::MakeRenderer() const {
         RendererParams.ReportUnused();
     }
     else {
-        if (RendererName != "sampler" && RendererName != "spectralrenderer") // Added by Trisha
+        if (RendererName != "sampler" && RendererName != "spectralrenderer" && RendererName != "cameras") // Added by Trisha
             Warning("Renderer type \"%s\" unknown.  Using \"sampler\".",
                     RendererName.c_str());
+        
         bool visIds = RendererParams.FindOneBool("visualizeobjectids", false);
+        string camerasFile = RendererParams.FindOneString("cameraTransforms", "");
         RendererParams.ReportUnused();
+        
         Sampler *sampler = MakeSampler(SamplerName, SamplerParams, camera->film, camera);
         if (!sampler) Severe("Unable to create sampler.");
+        
+        
         // Create surface and volume integrators
         SurfaceIntegrator *surfaceIntegrator = MakeSurfaceIntegrator(SurfIntegratorName,
             SurfIntegratorParams);
@@ -1377,6 +1388,10 @@ Renderer *RenderOptions::MakeRenderer() const {
             Warning("Rendering with spectral renderer. Rendering time will be slow!");
             renderer = new SpectralRenderer(sampler, camera, surfaceIntegrator,
                                             volumeIntegrator, visIds);
+        }
+        else if(RendererName == "cameras"){
+            renderer = new CamerasRenderer(sampler, camera, surfaceIntegrator,
+                                           volumeIntegrator, visIds,camerasFile);
         }
         else{
             renderer = new SamplerRenderer(sampler, camera, surfaceIntegrator,
