@@ -42,6 +42,7 @@
 #include "camera.h"
 #include "intersection.h"
 #include "paramset.h"
+#include <sstream>
 
 static uint32_t hash(char *key, uint32_t len)
 {
@@ -179,6 +180,7 @@ CamerasRenderer::CamerasRenderer(Sampler *s, Camera *c,
     cameraTransforms.clear();
     numberOfCameras = 0;
     ReadCameraFile(cameraFile);
+    
     
 }
 
@@ -319,11 +321,12 @@ void CamerasRenderer::Render(const Scene *scene) {
         // Change file name and then write out image
         int extPos = origImageFileName.find_last_of("."); // Deal with extension
         int strLength = origImageFileName.length();
-        string currImageFileName = origImageFileName.substr(0,extPos) + "_" + std::to_string(i+1) + origImageFileName.substr(extPos,strLength);
-        camera->film->imageOutputName = currImageFileName;
-        camera->film->WriteImage();
-        std::cout << "Assigned to imageFile " << currImageFileName << std::endl;
         
+        std::ostringstream currImageFileName;
+        currImageFileName << origImageFileName.substr(0,extPos) << "_" << (i+1) << origImageFileName.substr(extPos,strLength);
+        camera->film->imageOutputName = currImageFileName.str();
+        camera->film->WriteImage();
+        std::cout << "Assigned to imageFile " << currImageFileName.str() << std::endl;
         
     }
     
