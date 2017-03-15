@@ -249,10 +249,10 @@ void CamerasRenderer::Render(const Scene *scene) {
     
     string origImageFileName = camera->film->imageOutputName;
     
-    for (int i = 0; i < numberOfCameras; i++){
+    for (int camI = 0; camI < numberOfCameras; camI++){
         // Alert user
         std::cout << "-------------- " << std::endl;
-        std::cout << "Rendering camera " << i+1 << " of " << numberOfCameras << std::endl;
+        std::cout << "Rendering camera " << camI+1 << " of " << numberOfCameras << std::endl;
         
         // Clear film
         
@@ -275,7 +275,7 @@ void CamerasRenderer::Render(const Scene *scene) {
         // WARNING: We assume these values in order to build the AnimatedTransform, in other words we assume there's no animation/interpolation going on.
         float transformStart = 0;
         float transformEnd = 1;
-        Transform transform1 = Inverse(LookAt(Point(ex, ey, ez), Point(lx, ly, lz), Vector(ux, uy, uz)) * Transform(cameraTransforms[i]));
+        Transform transform1 = Inverse(LookAt(Point(ex, ey, ez), Point(lx, ly, lz), Vector(ux, uy, uz)) * Transform(cameraTransforms[camI]));
         Transform transform2 = transform1;
         
         // Update the camera to world transform
@@ -323,7 +323,7 @@ void CamerasRenderer::Render(const Scene *scene) {
         int strLength = origImageFileName.length();
         
         std::ostringstream currImageFileName;
-        currImageFileName << origImageFileName.substr(0,extPos) << "_" << (i+1) << origImageFileName.substr(extPos,strLength);
+        currImageFileName << origImageFileName.substr(0,extPos) << "_" << (camI+1) << origImageFileName.substr(extPos,strLength);
         camera->film->imageOutputName = currImageFileName.str();
         camera->film->WriteImage();
         std::cout << "Assigned to imageFile " << currImageFileName.str() << std::endl;
