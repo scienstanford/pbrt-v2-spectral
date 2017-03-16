@@ -205,6 +205,7 @@ void ImageFilm::WriteImage(float splatScale) {
     
     // Added by Trisha
     // Clear pixels, in case we're doing another render with the same film (e.g. camerasrenderer)
+    delete pixels;
     pixels = new BlockedArray<Pixel>(xPixelCount, yPixelCount);
     
 }

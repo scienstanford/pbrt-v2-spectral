@@ -98,7 +98,7 @@ void SpectralImageFilm::AddSample(const CameraSample &sample,
     //Andy: put in spectrum data here
     float origC[nSpectralSamples];
     L.GetOrigC(origC);
-    
+
     // Precompute $x$ and $y$ filter table offsets
     int *ifx = ALLOCA(int, x1 - x0 + 1);
     for (int x = x0; x <= x1; ++x) {
@@ -288,9 +288,6 @@ void SpectralImageFilm::WriteImage(float splatScale) {
                 {
                     finalC[nSpectralSamples * offset + i] =  max(0.f, finalC[nSpectralSamples*offset + i  ]);
                     
-                    // TODO: We need invWt here if it's metadata!
-                    // How do we know if its the metadata renderer?
-                    
                     // DEBUG
                     //std::cout << "finalC*invWt = " << finalC[nSpectralSamples * offset + i]*invWt << std::endl;
                     
@@ -311,6 +308,7 @@ void SpectralImageFilm::WriteImage(float splatScale) {
             
             for (int i = 0; i < nSpectralSamples; i++)
             {
+                
                 finalC[nSpectralSamples * offset + i] += splatScale * splatC[nSpectralSamples];
             }
             ++offset;
@@ -364,8 +362,6 @@ void SpectralImageFilm::WriteImage(float splatScale) {
         for (int j = 0; j < nPix; j++)
         {
             double r = (double)finalCMultiplied[nCMRows * j + i];
-            // DEBUG
-            //std::cout << "r = " << r << std::endl;
             fwrite((void*)(&r), sizeof(r), 1, spectralImageBin);
         }
     }
@@ -377,6 +373,7 @@ void SpectralImageFilm::WriteImage(float splatScale) {
     delete[] finalCMultiplied;
     
     // Clear pixels, in case we're doing another render with the same film (e.g. camerasrenderer)
+    delete pixels;
     pixels = new BlockedArray<Pixel>(xPixelCount, yPixelCount);
 }
 
