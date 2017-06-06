@@ -38,15 +38,16 @@ public:
     ShinyMetalMaterial(const Reference<Texture<Spectrum> > &ks, 
                        const Reference<Texture<float> > &rough,
                        const Reference<Texture<Spectrum> > &kr,
-                       const Reference<Texture<float> > &bump) 
-        : Ks(ks), Kr(kr), roughness(rough), bumpMap(bump) {
+                       const Reference<Texture<float> > &bump,
+                       Reference<Texture<Spectrum> > &normal)
+        : Ks(ks), Kr(kr), roughness(rough), bumpMap(bump), normalMap(normal) {
     }
     BSDF *GetBSDF(const DifferentialGeometry &dgGeom, 
                   const DifferentialGeometry &dgShading,
                   MemoryArena &arena) const;
 private:
     // ShinyMetalMaterial Private Data
-    Reference<Texture<Spectrum> > Ks, Kr;
+    Reference<Texture<Spectrum> > Ks, Kr, normalMap;
     Reference<Texture<float> > roughness;
     Reference<Texture<float> > bumpMap;
 };

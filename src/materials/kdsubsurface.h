@@ -40,12 +40,14 @@ public:
             Reference<Texture<Spectrum> > kr,
             Reference<Texture<float> > mfp,
             Reference<Texture<float> > e,
-            Reference<Texture<float> > bump) {
+            Reference<Texture<float> > bump,
+            Reference<Texture<Spectrum> > normal) {
         Kd = kd;
         Kr = kr;
         meanfreepath = mfp;
         eta = e;
         bumpMap = bump;
+        normalMap = normal;
     }
     BSDF *GetBSDF(const DifferentialGeometry &dgGeom,
                   const DifferentialGeometry &dgShading,
@@ -55,7 +57,7 @@ public:
                   MemoryArena &arena) const;
 private:
     // KdSubsurfaceMaterial Private Data
-    Reference<Texture<Spectrum> > Kd, Kr;
+    Reference<Texture<Spectrum> > Kd, Kr, normalMap;
     Reference<Texture<float> > meanfreepath, eta, bumpMap;
 };
 

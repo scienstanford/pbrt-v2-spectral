@@ -34,10 +34,17 @@
 BSDF *MirrorMaterial::GetBSDF(const DifferentialGeometry &dgGeom, const DifferentialGeometry &dgShading, MemoryArena &arena) const {
     // Allocate _BSDF_, possibly doing bump mapping with _bumpMap_
     DifferentialGeometry dgs;
-    if (bumpMap)
+    
+    // Trisha: This is a hack-y way to determine if we should use the NormalMap over the BumpMap. If the NormalMap is zero at this pixel value, we skip over it.
+    Spectrum normalSpectrum = normalMap->Evaluate(dgShading);
+    
+    if (!normalSpectrum.IsBlack())
+        NormalMap(normalMap, dgGeom, dgShading, &dgs);
+    else if (bumpMap)
         Bump(bumpMap, dgGeom, dgShading, &dgs);
     else
         dgs = dgShading;
+    
     BSDF *bsdf = BSDF_ALLOC(arena, BSDF)(dgs, dgGeom.nn);
     Spectrum R = Kr->Evaluate(dgs).Clamp();
     if (!R.IsBlack())
@@ -50,8 +57,9 @@ BSDF *MirrorMaterial::GetBSDF(const DifferentialGeometry &dgGeom, const Differen
 MirrorMaterial *CreateMirrorMaterial(const Transform &xform,
         const TextureParams &mp) {
     Reference<Texture<Spectrum> > Kr = mp.GetSpectrumTexture("Kr", Spectrum(0.9f));
-    Reference<Texture<float> > bumpMap = mp.GetFloatTexture("bumpmap", 0.f);
-    return new MirrorMaterial(Kr, bumpMap);
+        Reference<Texture<float> > bumpMap = mp.GetFloatTexture("bumpmap", 0.f);
+    Reference<Texture<Spectrum> > normalMap = mp.GetSpectrumTexture("normalmap", Spectrum(0.f));
+    return new MirrorMaterial(Kr, bumpMap, normalMap);
 }
 
 

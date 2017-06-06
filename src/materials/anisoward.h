@@ -45,15 +45,16 @@ public:
                     Reference<Texture<Spectrum> > ks,
                     Reference<Texture<float> > au,
                     Reference<Texture<float> > av,
-                    Reference<Texture<float> > bump)
-        : Kd(kd), Ks(ks), alphaU(au), alphaV(av), bumpMap(bump) {
+                    Reference<Texture<float> > bump,
+                    Reference<Texture<Spectrum> > normal)
+        : Kd(kd), Ks(ks), alphaU(au), alphaV(av), bumpMap(bump), normalMap(normal) {
     }
     BSDF *GetBSDF(const DifferentialGeometry &dgGeom,
                   const DifferentialGeometry &dgShading,
                   MemoryArena &arena) const;
 private:
     // AnisoWardMaterial Private Data
-    Reference<Texture<Spectrum> > Kd, Ks;
+    Reference<Texture<Spectrum> > Kd, Ks, normalMap;
     Reference<Texture<float> > alphaU, alphaV, bumpMap;
 };
 

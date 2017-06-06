@@ -50,6 +50,12 @@ public:
         return (1-s)*(1-t) * v00 + (1-s)*(  t) * v01 +
                (  s)*(1-t) * v10 + (  s)*(  t) * v11;
     }
+    
+    // Added by Trisha (hack!)
+    RGBSpectrum EvaluateMemory(const DifferentialGeometry &) const {
+        return RGBSpectrum(0.f);
+    }
+    
 private:
     // BilerpTexture Private Data
     TextureMapping2D *mapping;

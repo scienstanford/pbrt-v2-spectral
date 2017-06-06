@@ -64,6 +64,7 @@ public:
     ImageTexture(TextureMapping2D *m, const string &filename, bool doTri,
                  float maxAniso, ImageWrap wm, float scale, float gamma);
     Treturn Evaluate(const DifferentialGeometry &) const;
+    RGBSpectrum EvaluateMemory(const DifferentialGeometry &) const;
     ~ImageTexture();
     static void ClearCache() {
         typename std::map<TexInfo, MIPMap<Tmemory> *>::iterator iter;

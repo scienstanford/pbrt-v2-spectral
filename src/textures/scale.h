@@ -43,6 +43,10 @@ public:
     T2 Evaluate(const DifferentialGeometry &dg) const {
         return tex1->Evaluate(dg) * tex2->Evaluate(dg);
     }
+    // Added by Trisha (hack!)
+    RGBSpectrum EvaluateMemory(const DifferentialGeometry &dg) const {
+        return tex1->EvaluateMemory(dg) * tex2->EvaluateMemory(dg);
+    }
 private:
     Reference<Texture<T1> > tex1;
     Reference<Texture<T2> > tex2;

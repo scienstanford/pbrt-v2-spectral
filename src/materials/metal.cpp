@@ -32,11 +32,12 @@
 // MetalMaterial Method Definitions
 MetalMaterial::MetalMaterial(Reference<Texture<Spectrum> > et,
         Reference<Texture<Spectrum> > kk, Reference<Texture<float> > rough,
-        Reference<Texture<float> > bump) {
+        Reference<Texture<float> > bump, Reference<Texture<Spectrum> > normal) {
     eta = et;
     k = kk;
     roughness = rough;
     bumpMap = bump;
+    normalMap = normal;
 }
 
 
@@ -44,10 +45,17 @@ BSDF *MetalMaterial::GetBSDF(const DifferentialGeometry &dgGeom,
         const DifferentialGeometry &dgShading, MemoryArena &arena) const {
     // Allocate _BSDF_, possibly doing bump mapping with _bumpMap_
     DifferentialGeometry dgs;
-    if (bumpMap)
+    
+    // Trisha: This is a hack-y way to determine if we should use the NormalMap over the BumpMap. If the NormalMap is zero at this pixel value, we skip over it.
+    Spectrum normalSpectrum = normalMap->Evaluate(dgShading);
+    
+    if (!normalSpectrum.IsBlack())
+        NormalMap(normalMap, dgGeom, dgShading, &dgs);
+    else if (bumpMap)
         Bump(bumpMap, dgGeom, dgShading, &dgs);
     else
         dgs = dgShading;
+    
     BSDF *bsdf = BSDF_ALLOC(arena, BSDF)(dgs, dgGeom.nn);
 
     float rough = roughness->Evaluate(dgs);
@@ -95,8 +103,9 @@ MetalMaterial *CreateMetalMaterial(const Transform &xform, const TextureParams &
     Reference<Texture<Spectrum> > k = mp.GetSpectrumTexture("k", copperK);
 
     Reference<Texture<float> > roughness = mp.GetFloatTexture("roughness", .01f);
-    Reference<Texture<float> > bumpMap = mp.GetFloatTexture("bumpmap", 0.f);
-    return new MetalMaterial(eta, k, roughness, bumpMap);
+        Reference<Texture<float> > bumpMap = mp.GetFloatTexture("bumpmap", 0.f);
+    Reference<Texture<Spectrum> > normalMap = mp.GetSpectrumTexture("normalmap", Spectrum(0.f));
+    return new MetalMaterial(eta, k, roughness, bumpMap, normalMap);
 }
 
 

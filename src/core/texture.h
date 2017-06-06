@@ -129,6 +129,7 @@ template <typename T> class Texture : public ReferenceCounted {
 public:
     // Texture Interface
     virtual T Evaluate(const DifferentialGeometry &) const = 0;
+    virtual RGBSpectrum EvaluateMemory(const DifferentialGeometry &) const = 0;
     virtual ~Texture() { }
 };
 

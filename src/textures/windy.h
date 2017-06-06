@@ -48,6 +48,10 @@ public:
         float waveHeight = FBm(P, dpdx, dpdy, .5f, 6);
         return fabsf(windStrength) * waveHeight;
     }
+    // Added by Trisha (hack!)
+    RGBSpectrum EvaluateMemory(const DifferentialGeometry &) const {
+        return RGBSpectrum(0.f);
+    }
 private:
     // WindyTexture Private Data
     TextureMapping3D *mapping;

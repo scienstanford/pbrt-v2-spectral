@@ -42,7 +42,7 @@ void Material::Bump(const Reference<Texture<float> > &d,
                     DifferentialGeometry *dgBump) {
     // Compute offset positions and evaluate displacement texture
     DifferentialGeometry dgEval = dgs;
-
+    
     // Shift _dgEval_ _du_ in the $u$ direction
     float du = .5f * (fabsf(dgs.dudx) + fabsf(dgs.dudy));
     if (du == 0.f) du = .01f;
@@ -70,11 +70,58 @@ void Material::Bump(const Reference<Texture<float> > &d,
     dgBump->dpdv = dgs.dpdv + (vDisplace - displace) / dv * Vector(dgs.nn) +
                    displace * Vector(dgs.dndv);
     dgBump->nn = Normal(Normalize(Cross(dgBump->dpdu, dgBump->dpdv)));
+    
     if (dgs.shape->ReverseOrientation ^ dgs.shape->TransformSwapsHandedness)
         dgBump->nn *= -1.f;
 
     // Orient shading normal to match geometric normal
     dgBump->nn = Faceforward(dgBump->nn, dgGeom.nn);
+    
+    
+    
+}
+
+void Material::NormalMap(const Reference<Texture<Spectrum> > &d,
+                    const DifferentialGeometry &dgGeom,
+                    const DifferentialGeometry &dgs,
+                    DifferentialGeometry *dgBump) {
+    
+    DifferentialGeometry dgEval = dgs;
+    
+    
+    RGBSpectrum normalSpectrum = d->EvaluateMemory(dgs); // This read the RGB values directly from the texture, without first converting to spectra.
+    float normalRGB[3];
+    normalSpectrum.ToRGB(normalRGB);
+
+    // Remap normals
+    // X: -1 to +1 :  Red: 0 to 1
+    // Y: -1 to +1 :  Green: 0 to 1
+    // Z: 0 to -1 :  Blue: 0.5 to 1
+    normalRGB[0] = (normalRGB[0])*2 -1;
+    normalRGB[1] = (normalRGB[1])*2 -1;
+    normalRGB[2] = (normalRGB[2])*2 -1;
+    
+    Normal n = Normal(normalRGB[0],normalRGB[1],normalRGB[2]); // Normal from the normal map
+    n = Normalize(n); // Make sure it is a unit vector, or else our rotation equations are not valid.
+    
+    // These are tangent-space normals. We want object-space normals.
+    // To solve this, we first find the rotation between (0,0,1) and the normal in the normal map. We  then apply that rotation to the normal from geometry.
+    
+    // To find the rotation, we find the orthogonal axis to (0,0,1) and the normal. We then solve for the rotation around this orthogonal axis.
+    Vector orthogAxis = Cross(Vector(0,0,1),n);
+    float rotationAngle = acosf(Dot(Vector(0,0,1),n));
+
+    Transform rotationTransform = Rotate(Degrees(rotationAngle), orthogAxis); // Rotate takes degrees!
+    
+    *dgBump = dgs;
+    dgBump->nn = rotationTransform(dgs.nn);
+    
+    if (dgs.shape->ReverseOrientation ^ dgs.shape->TransformSwapsHandedness)
+        dgBump->nn *= -1.f;
+
+    // Orient shading normal to match geometric normal
+    dgBump->nn = Faceforward(dgBump->nn, dgGeom.nn);
+    
 }
 
 

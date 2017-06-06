@@ -34,7 +34,13 @@
 BSDF *UberMaterial::GetBSDF(const DifferentialGeometry &dgGeom, const DifferentialGeometry &dgShading, MemoryArena &arena) const {
     // Allocate _BSDF_, possibly doing bump mapping with _bumpMap_
     DifferentialGeometry dgs;
-    if (bumpMap)
+    
+    // Trisha: This is a hack-y way to determine if we should use the NormalMap over the BumpMap. If the NormalMap is zero at this pixel value, we skip over it.
+    Spectrum normalSpectrum = normalMap->Evaluate(dgShading);
+    
+    if (!normalSpectrum.IsBlack())
+        NormalMap(normalMap, dgGeom, dgShading, &dgs);
+    else if (bumpMap)
         Bump(bumpMap, dgGeom, dgShading, &dgs);
     else
         dgs = dgShading;
@@ -84,8 +90,9 @@ UberMaterial *CreateUberMaterial(const Transform &xform,
     Reference<Texture<float> > roughness = mp.GetFloatTexture("roughness", .1f);
     Reference<Texture<float> > eta = mp.GetFloatTexture("index", 1.5f);
     Reference<Texture<Spectrum> > opacity = mp.GetSpectrumTexture("opacity", 1.f);
-    Reference<Texture<float> > bumpMap = mp.GetFloatTexture("bumpmap", 0.f);
-    return new UberMaterial(Kd, Ks, Kr, Kt, roughness, opacity, eta, bumpMap);
+        Reference<Texture<float> > bumpMap = mp.GetFloatTexture("bumpmap", 0.f);
+    Reference<Texture<Spectrum> > normalMap = mp.GetSpectrumTexture("normalmap", Spectrum(0.f));
+    return new UberMaterial(Kd, Ks, Kr, Kt, roughness, opacity, eta, bumpMap, normalMap);
 }
 
 

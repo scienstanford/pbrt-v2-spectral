@@ -50,6 +50,10 @@ public:
         Point P = mapping->Map(dg, &dpdx, &dpdy);
         return Turbulence(P, dpdx, dpdy, omega, octaves);
     }
+    // Added by Trisha (hack!)
+    RGBSpectrum EvaluateMemory(const DifferentialGeometry &) const {
+        return RGBSpectrum(0.f);
+    }
 private:
     // WrinkledTexture Private Data
     int octaves;

@@ -75,8 +75,9 @@
 static map<string, float *> loadedRegularHalfangle;
 static map<string, KdTree<IrregIsotropicBRDFSample> *> loadedThetaPhi;
 MeasuredMaterial::MeasuredMaterial(const string &filename,
-      Reference<Texture<float> > bump) {
+      Reference<Texture<float> > bump, Reference<Texture<Spectrum> > normal) {
     bumpMap = bump;
+    normalMap = normal;
     const char *suffix = strrchr(filename.c_str(), '.');
     regularHalfangleData = NULL;
     thetaPhiData = NULL;
@@ -183,11 +184,18 @@ BSDF *MeasuredMaterial::GetBSDF(const DifferentialGeometry &dgGeom,
                                 MemoryArena &arena) const {
     // Allocate _BSDF_, possibly doing bump mapping with _bumpMap_
     DifferentialGeometry dgs;
-    if (bumpMap)
+    
+    // Trisha: This is a hack-y way to determine if we should use the NormalMap over the BumpMap. If the NormalMap is zero at this pixel value, we skip over it.
+    Spectrum normalSpectrum = normalMap->Evaluate(dgShading);
+    
+    if (!normalSpectrum.IsBlack())
+        NormalMap(normalMap, dgGeom, dgShading, &dgs);
+    else if (bumpMap)
         Bump(bumpMap, dgGeom, dgShading, &dgs);
     else
         dgs = dgShading;
     BSDF *bsdf = BSDF_ALLOC(arena, BSDF)(dgs, dgGeom.nn);
+    
     if (regularHalfangleData)
         bsdf->Add(BSDF_ALLOC(arena, RegularHalfangleBRDF)
             (regularHalfangleData, nThetaH, nThetaD, nPhiD));
@@ -199,8 +207,9 @@ BSDF *MeasuredMaterial::GetBSDF(const DifferentialGeometry &dgGeom,
 
 MeasuredMaterial *CreateMeasuredMaterial(const Transform &xform,
         const TextureParams &mp) {
-    Reference<Texture<float> > bumpMap = mp.GetFloatTexture("bumpmap", 0.f);
-    return new MeasuredMaterial(mp.FindFilename("filename"), bumpMap);
+        Reference<Texture<float> > bumpMap = mp.GetFloatTexture("bumpmap", 0.f);
+    Reference<Texture<Spectrum> > normalMap = mp.GetSpectrumTexture("normalmap", Spectrum(0.f));
+    return new MeasuredMaterial(mp.FindFilename("filename"), bumpMap, normalMap);
 }
 
 

@@ -38,15 +38,16 @@ public:
     // MatteMaterial Public Methods
     MatteMaterial(Reference<Texture<Spectrum> > kd,
                   Reference<Texture<float> > sig,
-                  Reference<Texture<float> > bump)
-        : Kd(kd), sigma(sig), bumpMap(bump) {
+                  Reference<Texture<float> > bump,
+                  Reference<Texture<Spectrum> > normal)
+        : Kd(kd), sigma(sig), bumpMap(bump), normalMap(normal) {
     }
     BSDF *GetBSDF(const DifferentialGeometry &dgGeom,
                   const DifferentialGeometry &dgShading,
                   MemoryArena &arena) const;
 private:
     // MatteMaterial Private Data
-    Reference<Texture<Spectrum> > Kd;
+    Reference<Texture<Spectrum> > Kd, normalMap;
     Reference<Texture<float> > sigma, bumpMap;
 };
 

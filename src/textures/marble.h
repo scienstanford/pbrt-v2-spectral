@@ -72,6 +72,12 @@ public:
         // Extra scale of 1.5 to increase variation among colors
         return 1.5f * ((1.f - t) * s0 + t * s1);
     }
+    
+    // Added by Trisha (hack!)
+    RGBSpectrum EvaluateMemory(const DifferentialGeometry &) const {
+        return RGBSpectrum(0.f);
+    }
+    
 private:
     // MarbleTexture Private Data
     int octaves;

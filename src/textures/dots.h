@@ -64,6 +64,12 @@ public:
         }
         return outsideDot->Evaluate(dg);
     }
+    
+    // Added by Trisha (hack!)
+    RGBSpectrum EvaluateMemory(const DifferentialGeometry &) const {
+        return RGBSpectrum(0.f);
+    }
+    
 private:
     // DotsTexture Private Data
     TextureMapping2D *mapping;

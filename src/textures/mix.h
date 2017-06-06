@@ -45,6 +45,13 @@ public:
         float amt = amount->Evaluate(dg);
         return (1.f - amt) * t1 + amt * t2;
     }
+    
+    RGBSpectrum EvaluateMemory(const DifferentialGeometry &dg) const {
+        RGBSpectrum t1 = tex1->EvaluateMemory(dg), t2 = tex2->EvaluateMemory(dg);
+        RGBSpectrum amt = amount->EvaluateMemory(dg);
+        return (RGBSpectrum(1.f) - amt) * t1 + amt * t2;
+    }
+    
 private:
     Reference<Texture<T> > tex1, tex2;
     Reference<Texture<float> > amount;

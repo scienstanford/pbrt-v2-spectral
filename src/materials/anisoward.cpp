@@ -43,11 +43,18 @@ BSDF *AnisoWardMaterial::GetBSDF(const DifferentialGeometry &dgGeom,
                                MemoryArena &arena) const {
     // Allocate _BSDF_, possibly doing bump mapping with _bumpMap_
     DifferentialGeometry dgs;
-    if (bumpMap)
+    
+    // Trisha: This is a hack-y way to determine if we should use the NormalMap over the BumpMap. If the NormalMap is zero at this pixel value, we skip over it.
+    Spectrum normalSpectrum = normalMap->Evaluate(dgShading);
+    
+    if (!normalSpectrum.IsBlack())
+        NormalMap(normalMap, dgGeom, dgShading, &dgs);
+    else if (bumpMap)
         Bump(bumpMap, dgGeom, dgShading, &dgs);
     else
         dgs = dgShading;
     BSDF *bsdf = BSDF_ALLOC(arena, BSDF)(dgs, dgGeom.nn);
+    
     Spectrum kd = Kd->Evaluate(dgs).Clamp();
     BxDF *diff = BSDF_ALLOC(arena, Lambertian)(kd);
     Spectrum ks = Ks->Evaluate(dgs).Clamp();
@@ -66,8 +73,9 @@ AnisoWardMaterial *CreateAnisoWardMaterial(const Transform &xform,
     Reference<Texture<Spectrum> > Ks = mp.GetSpectrumTexture("Ks", Spectrum(0.25f));
     Reference<Texture<float> > au = mp.GetFloatTexture("alphaU", 0.1f);
 	Reference<Texture<float> > av = mp.GetFloatTexture("alphaV", 0.1f);
-    Reference<Texture<float> > bumpMap = mp.GetFloatTexture("bumpmap", 0.f);
-    return new AnisoWardMaterial(Kd, Ks, au, av, bumpMap);
+        Reference<Texture<float> > bumpMap = mp.GetFloatTexture("bumpmap", 0.f);
+    Reference<Texture<Spectrum> > normalMap = mp.GetSpectrumTexture("normalmap", Spectrum(0.f));
+    return new AnisoWardMaterial(Kd, Ks, au, av, bumpMap, normalMap);
 }
 
 

@@ -49,6 +49,14 @@ public:
         float rgb[3] = { s - Floor2Int(s), t - Floor2Int(t), 0.f };
         return Spectrum::FromRGB(rgb);
     }
+    
+    RGBSpectrum EvaluateMemory(const DifferentialGeometry &dg) const {
+        float s, t, dsdx, dtdx, dsdy, dtdy;
+        mapping->Map(dg, &s, &t, &dsdx, &dtdx, &dsdy, &dtdy);
+        float rgb[3] = { s - Floor2Int(s), t - Floor2Int(t), 0.f };
+        return RGBSpectrum::FromRGB(rgb);
+    }
+    
 private:
     TextureMapping2D *mapping;
 };

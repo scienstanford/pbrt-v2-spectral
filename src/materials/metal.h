@@ -39,14 +39,15 @@ public:
     // MetalMaterial Public Methods
     MetalMaterial(Reference<Texture<Spectrum> > eta,
         Reference<Texture<Spectrum> > k, Reference<Texture<float> > rough,
-        Reference<Texture<float> > bump);
+        Reference<Texture<float> > bump, Reference<Texture<Spectrum> > normal);
     BSDF *GetBSDF(const DifferentialGeometry &dgGeom,
         const DifferentialGeometry &dgShading, MemoryArena &arena) const;
 private:
     // MetalMaterial Private Data
-    Reference<Texture<Spectrum> > eta, k;
+    Reference<Texture<Spectrum> > eta, k, normalMap;
     Reference<Texture<float> > roughness;
     Reference<Texture<float> > bumpMap;
+    
 };
 
 

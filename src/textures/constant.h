@@ -41,6 +41,10 @@ public:
     T Evaluate(const DifferentialGeometry &) const {
         return value;
     }
+    // Added by Trisha (hack!)
+    RGBSpectrum EvaluateMemory(const DifferentialGeometry &) const {
+        return RGBSpectrum(0.f);
+    }
 private:
     T value;
 };

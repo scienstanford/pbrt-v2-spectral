@@ -34,10 +34,17 @@
 BSDF *SubstrateMaterial::GetBSDF(const DifferentialGeometry &dgGeom, const DifferentialGeometry &dgShading, MemoryArena &arena) const {
     // Allocate _BSDF_, possibly doing bump mapping with _bumpMap_
     DifferentialGeometry dgs;
-    if (bumpMap)
+    
+    // Trisha: This is a hack-y way to determine if we should use the NormalMap over the BumpMap. If the NormalMap is zero at this pixel value, we skip over it.
+    Spectrum normalSpectrum = normalMap->Evaluate(dgShading);
+    
+    if (!normalSpectrum.IsBlack())
+        NormalMap(normalMap, dgGeom, dgShading, &dgs);
+    else if (bumpMap)
         Bump(bumpMap, dgGeom, dgShading, &dgs);
     else
         dgs = dgShading;
+    
     BSDF *bsdf = BSDF_ALLOC(arena, BSDF)(dgs, dgGeom.nn);
     Spectrum d = Kd->Evaluate(dgs).Clamp();
     Spectrum s = Ks->Evaluate(dgs).Clamp();
@@ -55,8 +62,9 @@ SubstrateMaterial *CreateSubstrateMaterial(const Transform &xform,
     Reference<Texture<Spectrum> > Ks = mp.GetSpectrumTexture("Ks", Spectrum(.5f));
     Reference<Texture<float> > uroughness = mp.GetFloatTexture("uroughness", .1f);
     Reference<Texture<float> > vroughness = mp.GetFloatTexture("vroughness", .1f);
-    Reference<Texture<float> > bumpMap = mp.GetFloatTexture("bumpmap", 0.f);
-    return new SubstrateMaterial(Kd, Ks, uroughness, vroughness, bumpMap);
+        Reference<Texture<float> > bumpMap = mp.GetFloatTexture("bumpmap", 0.f);
+    Reference<Texture<Spectrum> > normalMap = mp.GetSpectrumTexture("normalmap", Spectrum(0.f));
+    return new SubstrateMaterial(Kd, Ks, uroughness, vroughness, bumpMap, normalMap);
 }
 
 

@@ -36,14 +36,15 @@
 class MirrorMaterial : public Material {
 public:
     // MirrorMaterial Public Methods
-    MirrorMaterial(Reference<Texture<Spectrum> > r, Reference<Texture<float> > bump) {
+    MirrorMaterial(Reference<Texture<Spectrum> > r, Reference<Texture<float> > bump, Reference<Texture<Spectrum> > normal) {
         Kr = r;
         bumpMap = bump;
+        normalMap = normal;
     }
     BSDF *GetBSDF(const DifferentialGeometry &dgGeom, const DifferentialGeometry &dgShading, MemoryArena &arena) const;
 private:
     // MirrorMaterial Private Data
-    Reference<Texture<Spectrum> > Kr;
+    Reference<Texture<Spectrum> > Kr, normalMap;
     Reference<Texture<float> > bumpMap;
 };
 

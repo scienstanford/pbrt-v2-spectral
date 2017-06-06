@@ -40,13 +40,15 @@ public:
             Reference<Texture<Spectrum> > sa,
             Reference<Texture<Spectrum> > sps,
             Reference<Texture<float> > e,
-            Reference<Texture<float> > bump) {
+            Reference<Texture<float> > bump,
+            Reference<Texture<Spectrum> > normal) {
         scale = sc;
         Kr = kr;
         sigma_a = sa;
         sigma_prime_s = sps;
         eta = e;
         bumpMap = bump;
+        normalMap = normal;
     }
     BSDF *GetBSDF(const DifferentialGeometry &dgGeom,
                   const DifferentialGeometry &dgShading,
@@ -57,7 +59,7 @@ public:
 private:
     // SubsurfaceMaterial Private Data
     float scale;
-    Reference<Texture<Spectrum> > Kr, sigma_a, sigma_prime_s;
+    Reference<Texture<Spectrum> > Kr, sigma_a, sigma_prime_s, normalMap;
     Reference<Texture<float> > eta, bumpMap;
 };
 

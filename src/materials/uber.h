@@ -42,7 +42,8 @@ public:
         Reference<Texture<float> > rough,
         Reference<Texture<Spectrum> > op,
         Reference<Texture<float> > e,
-        Reference<Texture<float> > bump) {
+        Reference<Texture<float> > bump,
+        Reference<Texture<Spectrum> > normal) {
         Kd = kd;
         Ks = ks;
         Kr = kr;
@@ -51,11 +52,12 @@ public:
         opacity = op;
         eta = e;
         bumpMap = bump;
+        normalMap = normal;
     }
     BSDF *GetBSDF(const DifferentialGeometry &dgGeom, const DifferentialGeometry &dgShading, MemoryArena &arena) const;
 private:
     // UberMaterial Private Data
-    Reference<Texture<Spectrum> > Kd, Ks, Kr, Kt, opacity;
+    Reference<Texture<Spectrum> > Kd, Ks, Kr, Kt, opacity, normalMap;
     Reference<Texture<float> > roughness, eta, bumpMap;
 };
 

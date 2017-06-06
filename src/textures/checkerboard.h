@@ -93,6 +93,10 @@ public:
                    area2         * tex2->Evaluate(dg);
         }
     }
+    // Added by Trisha (hack!)
+    RGBSpectrum EvaluateMemory(const DifferentialGeometry &) const {
+        return RGBSpectrum(0.f);
+    }
 private:
     // Checkerboard2DTexture Private Data
     TextureMapping2D *mapping;
@@ -118,6 +122,10 @@ public:
             return tex1->Evaluate(dg);
         else
             return tex2->Evaluate(dg);
+    }
+    // Added by Trisha (hack!)
+    RGBSpectrum EvaluateMemory(const DifferentialGeometry &) const {
+        return RGBSpectrum(0.f);
     }
 private:
     // Checkerboard3DTexture Private Data

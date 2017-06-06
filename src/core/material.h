@@ -49,6 +49,8 @@ public:
     static void Bump(const Reference<Texture<float> > &d, const DifferentialGeometry &dgGeom,
         const DifferentialGeometry &dgShading, DifferentialGeometry *dgBump);
     
+    static void NormalMap(const Reference<Texture<Spectrum> > &d, const DifferentialGeometry &dgGeom,
+                       const DifferentialGeometry &dgShading, DifferentialGeometry *dgBump);
     // Material Public Data
     const uint32_t materialId; // Added by Trisha
 protected:

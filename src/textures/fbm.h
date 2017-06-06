@@ -47,6 +47,12 @@ public:
         Point P = mapping->Map(dg, &dpdx, &dpdy);
         return FBm(P, dpdx, dpdy, omega, octaves);
     }
+    
+    // Added by Trisha (hack!)
+    RGBSpectrum EvaluateMemory(const DifferentialGeometry &) const {
+        return RGBSpectrum(0.f);
+    }
+    
 private:
     // FBmTexture Private Data
     float omega;

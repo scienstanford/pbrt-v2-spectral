@@ -38,17 +38,18 @@ public:
     // SubstrateMaterial Public Methods
     SubstrateMaterial(Reference<Texture<Spectrum> > kd, Reference<Texture<Spectrum> > ks,
             Reference<Texture<float> > u, Reference<Texture<float> > v,
-            Reference<Texture<float> > bump) {
+            Reference<Texture<float> > bump, Reference<Texture<Spectrum> > normal) {
         Kd = kd;
         Ks = ks;
         nu = u;
         nv = v;
         bumpMap = bump;
+        normalMap = normal;
     }
     BSDF *GetBSDF(const DifferentialGeometry &dgGeom, const DifferentialGeometry &dgShading, MemoryArena &arena) const;
 private:
     // SubstrateMaterial Private Data
-    Reference<Texture<Spectrum> > Kd, Ks;
+    Reference<Texture<Spectrum> > Kd, Ks, normalMap;
     Reference<Texture<float> > nu, nv;
     Reference<Texture<float> > bumpMap;
 };

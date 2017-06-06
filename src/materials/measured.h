@@ -38,7 +38,7 @@
 class MeasuredMaterial : public Material {
 public:
     // MeasuredMaterial Public Methods
-    MeasuredMaterial(const string &filename, Reference<Texture<float> > bump);
+    MeasuredMaterial(const string &filename, Reference<Texture<float> > bump, Reference<Texture<Spectrum> > normal);
     BSDF *GetBSDF(const DifferentialGeometry &dgGeom,
                   const DifferentialGeometry &dgShading,
                   MemoryArena &arena) const;
@@ -48,6 +48,7 @@ private:
     float *regularHalfangleData;
     uint32_t nThetaH, nThetaD, nPhiD;
     Reference<Texture<float> > bumpMap;
+    Reference<Texture<Spectrum> > normalMap;
 };
 
 
