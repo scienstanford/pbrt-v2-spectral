@@ -37,8 +37,9 @@ class MixMaterial : public Material {
 public:
     // MixMaterial Public Methods
     MixMaterial(Reference<Material> mat1, Reference<Material> mat2,
-                Reference<Texture<Spectrum> > sc)
-        : m1(mat1), m2(mat2), scale(sc) {
+                Reference<Texture<Spectrum> > sc, Reference<Texture<Spectrum> > kt,
+                Reference<Texture<float> > e, Reference<Texture<Spectrum> > op)
+        : m1(mat1), m2(mat2), scale(sc), Kt(kt), eta(e), opacity(op) {
     }
     BSDF *GetBSDF(const DifferentialGeometry &dgGeom,
                   const DifferentialGeometry &dgShading,
@@ -46,7 +47,8 @@ public:
 private:
     // MixMaterial Private Data
     Reference<Material> m1, m2;
-    Reference<Texture<Spectrum> > scale;
+    Reference<Texture<Spectrum> > scale, Kt, opacity;
+    Reference<Texture<float> > eta;
 };
 
 

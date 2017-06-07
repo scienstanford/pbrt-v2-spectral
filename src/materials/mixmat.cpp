@@ -44,7 +44,26 @@ BSDF *MixMaterial::GetBSDF(const DifferentialGeometry &dgGeom,
         b1->bxdfs[i] = BSDF_ALLOC(arena, ScaledBxDF)(b1->bxdfs[i], s1);
     for (int i = 0; i < n2; ++i)
         b1->Add(BSDF_ALLOC(arena, ScaledBxDF)(b2->bxdfs[i], s2));
+    
+    // Added by Trisha:
+    // Parameters copied from Uber material
+    
+    Spectrum op = opacity->Evaluate(dgShading).Clamp();
+    float e = eta->Evaluate(dgShading);
+    
+    if (op != Spectrum(1.)) {
+        BxDF *tr = BSDF_ALLOC(arena, SpecularTransmission)(-op + Spectrum(1.), 1., 1.);
+        b1->Add(tr);
+    }
+    
+    Spectrum kt = op * Kt->Evaluate(dgShading).Clamp();
+    if (!kt.IsBlack())
+        b1->Add(BSDF_ALLOC(arena, SpecularTransmission)(kt, e, 1.f));
+    
+    
     return b1;
+    
+    
 }
 
 
@@ -53,7 +72,10 @@ MixMaterial *CreateMixMaterial(const Transform &xform,
         const Reference<Material> &m2) {
     Reference<Texture<Spectrum> > scale = mp.GetSpectrumTexture("amount",
         Spectrum(0.5f));
-    return new MixMaterial(m1, m2, scale);
+    Reference<Texture<Spectrum> > kt = mp.GetSpectrumTexture("Kt", Spectrum(0.f));
+    Reference<Texture<Spectrum> > opacity = mp.GetSpectrumTexture("opacity", 1.f);
+    Reference<Texture<float> > e = mp.GetFloatTexture("index", 1.5f);
+    return new MixMaterial(m1, m2, scale, kt, e, opacity);
 }
 
 
