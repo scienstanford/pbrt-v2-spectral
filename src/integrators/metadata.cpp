@@ -55,7 +55,7 @@ Spectrum MetadataIntegrator::Li(const Scene *scene,
         {
             
             Point intersectPoint = isect.dg.p;
-            Point rayOrigin = ray.o; // In a pinhole camera, this is the pinhole. In realistic diffraction, it's the middle of the last lens element (closest to the sensor)
+            Point rayOrigin = Point(0,0,0);
             Vector toIntersect = intersectPoint - rayOrigin;
             float distance = sqrt(toIntersect[0]*toIntersect[0] + toIntersect[1]*toIntersect[1] + toIntersect[2]*toIntersect[2]);
             L = Spectrum(distance);

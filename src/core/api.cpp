@@ -54,9 +54,11 @@
 // Ben
 #include "film/image.h"
 #include "film/spectralImageNoCamera.h"
+
 // Trisha
 #include "volumes/water.h"
 #include "integrators/metadata.h"
+#include "cameras/realisticEye.h"
 
 #include "filters/box.h"
 #include "filters/gaussian.h"
@@ -637,6 +639,8 @@ Camera *MakeCamera(const string &name,
     	camera = CreateIdealDiffractionCamera(paramSet, animatedCam2World, film);    //Andy added for lens ray tracing
     else if (name == "pinhole")   //Andy added for lens ray tracing
     	camera = CreatePinholeCamera(paramSet, animatedCam2World, film);    //Andy added for lens ray tracing
+    else if (name == "realisticEye") // Added by Trisha
+        camera = CreateRealisticEyeCamera(paramSet,animatedCam2World,film);
     else
         Warning("Camera \"%s\" unknown.", name.c_str());
     paramSet.ReportUnused();

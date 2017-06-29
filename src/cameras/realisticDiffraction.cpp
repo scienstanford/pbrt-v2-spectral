@@ -1022,7 +1022,8 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
                 // --- Update ray starting point ---
                 
                 startingPoint = intersectPoint;
-
+                //std::cout << "(" << ray->o.x << "," << ray->o.y << "," << ray->o.z << ")" << std::endl;
+                
             }
             else
             {
@@ -1150,9 +1151,6 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
         }
         //------------end diffraction-----------------
     }
-    
-    // Set the origin of the ray to be the center of the lens element closest to the center. In this case, this is always (0,0,0) in the camera coordinate space. This is primarily to have a correct depth map calculation.
-    ray->o = Point(0,0,0);
     
     ray->time = Lerp(sample.time, ShutterOpen, ShutterClose);
     CameraToWorld(*ray, ray);

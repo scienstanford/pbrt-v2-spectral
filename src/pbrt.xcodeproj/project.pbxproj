@@ -22,6 +22,11 @@
 		4BA483D51D074FD600D1C062 /* perspectiveDiffraction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4BA483CE1D074FD600D1C062 /* perspectiveDiffraction.cpp */; };
 		4BA483D61D074FD600D1C062 /* pinhole.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4BA483D01D074FD600D1C062 /* pinhole.cpp */; };
 		4BA483D71D074FD600D1C062 /* realisticDiffraction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4BA483D21D074FD600D1C062 /* realisticDiffraction.cpp */; };
+		8210D3541EFC5A980046207E /* realisticEye.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8210D3521EFC5A980046207E /* realisticEye.cpp */; };
+		8210D3551F01B18E0046207E /* realisticEye.h in Sources */ = {isa = PBXBuildFile; fileRef = 8210D3531EFC5A980046207E /* realisticEye.h */; };
+		82B5D9F31EF9CE0F006BF199 /* camerasrenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 82B5D9EF1EF9CE0F006BF199 /* camerasrenderer.cpp */; };
+		82B5D9F41EF9CE0F006BF199 /* spectralrenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 82B5D9F11EF9CE0F006BF199 /* spectralrenderer.cpp */; };
+		82B5D9F71EF9CE1F006BF199 /* metadata.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 82B5D9F51EF9CE1F006BF199 /* metadata.cpp */; };
 		B130248E1236EE5100206AC7 /* fileutil.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B130248C1236EE5100206AC7 /* fileutil.cpp */; };
 		B19397BB12083210008317C5 /* shinymetal.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B19397B912083210008317C5 /* shinymetal.cpp */; };
 		B1D8EB5A117030DE00A8A49E /* bvh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B1D8EB54117030DE00A8A49E /* bvh.cpp */; };
@@ -204,6 +209,14 @@
 		4BA483D11D074FD600D1C062 /* pinhole.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pinhole.h; sourceTree = "<group>"; };
 		4BA483D21D074FD600D1C062 /* realisticDiffraction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = realisticDiffraction.cpp; sourceTree = "<group>"; };
 		4BA483D31D074FD600D1C062 /* realisticDiffraction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = realisticDiffraction.h; sourceTree = "<group>"; };
+		8210D3521EFC5A980046207E /* realisticEye.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = realisticEye.cpp; sourceTree = "<group>"; };
+		8210D3531EFC5A980046207E /* realisticEye.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = realisticEye.h; sourceTree = "<group>"; };
+		82B5D9EF1EF9CE0F006BF199 /* camerasrenderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = camerasrenderer.cpp; sourceTree = "<group>"; };
+		82B5D9F01EF9CE0F006BF199 /* camerasrenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = camerasrenderer.h; sourceTree = "<group>"; };
+		82B5D9F11EF9CE0F006BF199 /* spectralrenderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = spectralrenderer.cpp; sourceTree = "<group>"; };
+		82B5D9F21EF9CE0F006BF199 /* spectralrenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = spectralrenderer.h; sourceTree = "<group>"; };
+		82B5D9F51EF9CE1F006BF199 /* metadata.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = metadata.cpp; sourceTree = "<group>"; };
+		82B5D9F61EF9CE1F006BF199 /* metadata.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = metadata.h; sourceTree = "<group>"; };
 		B130248C1236EE5100206AC7 /* fileutil.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fileutil.cpp; sourceTree = "<group>"; };
 		B130248D1236EE5100206AC7 /* fileutil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fileutil.h; sourceTree = "<group>"; };
 		B154B21412001D29009551FC /* stdafx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stdafx.h; sourceTree = "<group>"; };
@@ -506,6 +519,8 @@
 		B1D8EB5D117030E500A8A49E /* cameras */ = {
 			isa = PBXGroup;
 			children = (
+				8210D3521EFC5A980046207E /* realisticEye.cpp */,
+				8210D3531EFC5A980046207E /* realisticEye.h */,
 				4BA483CC1D074FD600D1C062 /* idealDiffraction.cpp */,
 				4BA483CD1D074FD600D1C062 /* idealDiffraction.h */,
 				4BA483CE1D074FD600D1C062 /* perspectiveDiffraction.cpp */,
@@ -644,6 +659,8 @@
 		B1D8EBE71170310E00A8A49E /* integrators */ = {
 			isa = PBXGroup;
 			children = (
+				82B5D9F51EF9CE1F006BF199 /* metadata.cpp */,
+				82B5D9F61EF9CE1F006BF199 /* metadata.h */,
 				B1D8EBE81170310E00A8A49E /* ambientocclusion.cpp */,
 				B1D8EBE91170310E00A8A49E /* ambientocclusion.h */,
 				B1D8EBEA1170310E00A8A49E /* diffuseprt.cpp */,
@@ -743,6 +760,10 @@
 		B1D8EC2E1170310E00A8A49E /* renderers */ = {
 			isa = PBXGroup;
 			children = (
+				82B5D9EF1EF9CE0F006BF199 /* camerasrenderer.cpp */,
+				82B5D9F01EF9CE0F006BF199 /* camerasrenderer.h */,
+				82B5D9F11EF9CE0F006BF199 /* spectralrenderer.cpp */,
+				82B5D9F21EF9CE0F006BF199 /* spectralrenderer.h */,
 				B1D8EC301170310E00A8A49E /* aggregatetest.cpp */,
 				B1D8EC311170310E00A8A49E /* aggregatetest.h */,
 				B1D8EC321170310E00A8A49E /* createprobes.cpp */,
@@ -907,6 +928,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8210D3551F01B18E0046207E /* realisticEye.h in Sources */,
 				B1D8EB5A117030DE00A8A49E /* bvh.cpp in Sources */,
 				B1D8EB5B117030DE00A8A49E /* grid.cpp in Sources */,
 				B1D8EB5C117030DE00A8A49E /* kdtreeaccel.cpp in Sources */,
@@ -923,7 +945,9 @@
 				B1D8EBBB117030F200A8A49E /* floatfile.cpp in Sources */,
 				4B7238F51D0776CC0083F616 /* pbrtparse.cpp in Sources */,
 				B1D8EBBC117030F200A8A49E /* geometry.cpp in Sources */,
+				82B5D9F31EF9CE0F006BF199 /* camerasrenderer.cpp in Sources */,
 				B1D8EBBD117030F200A8A49E /* imageio.cpp in Sources */,
+				82B5D9F41EF9CE0F006BF199 /* spectralrenderer.cpp in Sources */,
 				B1D8EBBE117030F200A8A49E /* integrator.cpp in Sources */,
 				4BA483D41D074FD600D1C062 /* idealDiffraction.cpp in Sources */,
 				B1D8EBBF117030F200A8A49E /* intersection.cpp in Sources */,
@@ -953,6 +977,7 @@
 				B1D8EBD6117030F200A8A49E /* timer.cpp in Sources */,
 				B1D8EBD7117030F200A8A49E /* transform.cpp in Sources */,
 				B1D8EBD8117030F200A8A49E /* volume.cpp in Sources */,
+				8210D3541EFC5A980046207E /* realisticEye.cpp in Sources */,
 				B1D8EC831170310E00A8A49E /* ambientocclusion.cpp in Sources */,
 				B1D8EC841170310E00A8A49E /* diffuseprt.cpp in Sources */,
 				B1D8EC851170310E00A8A49E /* dipolesubsurface.cpp in Sources */,
@@ -1015,6 +1040,7 @@
 				B1D8ECB61170310E00A8A49E /* nurbs.cpp in Sources */,
 				B1D8ECB71170310E00A8A49E /* paraboloid.cpp in Sources */,
 				B1D8ECB81170310E00A8A49E /* sphere.cpp in Sources */,
+				82B5D9F71EF9CE1F006BF199 /* metadata.cpp in Sources */,
 				B1D8ECB91170310E00A8A49E /* trianglemesh.cpp in Sources */,
 				4BA483D51D074FD600D1C062 /* perspectiveDiffraction.cpp in Sources */,
 				B1D8ECBA1170310E00A8A49E /* bilerp.cpp in Sources */,
