@@ -96,12 +96,6 @@ RealisticEyeCamera *CreateRealisticEyeCamera(const ParamSet &params,
         Severe( "No lens spec file supplied!\n" );
     }
     
-//    // Check for ocular medium file
-    string mediaFile = params.FindOneString("medFile", "");
-//    if (mediaFile == "") {
-//        Severe( "No ocular media file supplied!\n" );
-//    }
-    
     // These are additional parameters we need to specify.
     float pupDiam = params.FindOneFloat("pupilDiameter", 1.0); //mm
     float lensDecenterX = params.FindOneFloat("lensDecenterX",0); //mm
@@ -130,6 +124,7 @@ RealisticEyeCamera *CreateRealisticEyeCamera(const ParamSet &params,
 
     // Specify which material index corresponds to the GRIN lens. If nothing is specified (grinSurfaceIndex == -1) we assume that a normal lens is used instead of a GRIN lens
     int grinSurfaceIndex = params.FindOneInt("grinMaterialIndex", -1);
+    string grinSurfaceFile = params.FindOneString("GRINfile", "");
     
     // Flags for realism/speed
     bool chromaticFlag = params.FindOneBool("chromaticAberrationEnabled", 0.0);
@@ -138,7 +133,7 @@ RealisticEyeCamera *CreateRealisticEyeCamera(const ParamSet &params,
     // Flags for convention
     bool flipRadFlag = params.FindOneBool("flipLensRadius", 0.0);
     
-    return new RealisticEyeCamera(cam2world,film,hither,yon,shutteropen,shutterclose,specfile,mediaFile,pupDiam,lensDecenterX,lensDecenterY,lensTiltX,lensTiltY,retinaDistance,retinaRadius,retinaSemiDiam,chromaticFlag,IORforEyeEnabled,flipRadFlag,iorSpectra,grinSurfaceIndex);
+    return new RealisticEyeCamera(cam2world,film,hither,yon,shutteropen,shutterclose,specfile,pupDiam,lensDecenterX,lensDecenterY,lensTiltX,lensTiltY,retinaDistance,retinaRadius,retinaSemiDiam,chromaticFlag,IORforEyeEnabled,flipRadFlag,iorSpectra,grinSurfaceIndex,grinSurfaceFile);
 }
 
 
@@ -149,7 +144,6 @@ RealisticEyeCamera::RealisticEyeCamera(const AnimatedTransform &cam2world,
                                        float hither, float yon,
                                        float sopen, float sclose,
                                        string specfile,
-                                       string mediaFile,
                                        float pupDiam,
                                        float ldX,
                                        float ldY,
@@ -162,13 +156,14 @@ RealisticEyeCamera::RealisticEyeCamera(const AnimatedTransform &cam2world,
                                        bool iorFlag,
                                        bool flipRadFlag,
                                        vector<Spectrum> iorS,
-                                       int gSI)
+                                       int gSI,
+                                       string grinFile)
 : Camera(cam2world, sopen, sclose, f), ShutterOpen(sopen), ShutterClose(sclose),film(f)
 {
     
     // Find the complete path for the specfile
     string lensFileName = AbsolutePath(ResolveFilename(specfile));
-    string mediaFileName = AbsolutePath(ResolveFilename(mediaFile));
+    string grinFileName = AbsolutePath(ResolveFilename(grinFile));
     
     pupilDiameter = pupDiam;
     lensDecenterX = ldX;
@@ -223,7 +218,9 @@ RealisticEyeCamera::RealisticEyeCamera(const AnimatedTransform &cam2world,
         if(flipLensRadius){
             currentLensEl.radiusX = -1*currentLensEl.radiusX;
             currentLensEl.radiusY = -1*currentLensEl.radiusY;
-            Warning("Flipping lens radius convention.");
+            currentLensEl.conicConstantX = -1*currentLensEl.conicConstantX;
+            currentLensEl.conicConstantY = -1*currentLensEl.conicConstantY;
+            Warning("Flipping lens radius & conic convention.");
         }
         
         // A radius of zero in BOTH x and y directions indicates an aperture. We should be careful of this though, since sometimes we may want to define a flat surface...
@@ -234,57 +231,76 @@ RealisticEyeCamera::RealisticEyeCamera(const AnimatedTransform &cam2world,
         lensEls.push_back(currentLensEl);
     }
     
-    // ---------------------------
-    // --- Read in medium file ---
-    // ---------------------------
-    
-    // TEMP: Don't use this for now.
-    /*
-    vals.clear();
-    
-    // Check to see if there is valid input in the lens file.
-    if (!ReadFloatFile(mediaFileName.c_str(), &vals)) {
-        Warning("Unable to read ocular media file!");
-        return;
+    // Check thickness of last element. It should be zero, since we use the "retina distance" parameter for this final "thickness."
+    if(lensEls[lensEls.size()-1].thickness != 0){
+        Error("Thickness of lens element closest to zero must be zero. Define thickness in 'retinaDistance' parameter instead.");
     }
+    // ---------------------------
+    // --- Read in GRIN file ---
+    // ---------------------------
     
-    // The lens file should include  columns for [GRINflag mediumIndex -- -- -- -- -- -- -- -- --], with the "--" parameter depending on whether or not GRINflag is 1 or 0.
-    // Let's check then that the file is a multiple of 11
-    if ((vals.size()) % 11 != 0)
-    {
-        Warning("Wrong number of float values in lens media file!");
-        return;
-    }
+    // TODO: DOUBLE CHECK THAT THIS IS WORKING
     
-    for (int i = 0; i < vals.size(); i+=11)
-    {
-        MediumElement currMedia;
-        currMedia.GRINflag = vals[i];
-        currMedia.indexLabel = vals[i+1];
+    /* The GRIN file described the GRIN lens used. It follows the same format as Zemax, specifically:
+     
+     MIN_WAVELENGTH MAX_WAVELENGTH
+     
+     REF_WAVELENGTH
+     
+     K_MAX L_MAX
+     
+     K11 K12 K13 ... K1K_MAX
+     
+     K21 K22 K23 ... K2K_MAX
+     
+     K31 K32 K33 ... K3K_MAX
+     
+     L11 L12 L13 ... L1L_MAX
+     
+     L21 L22 L23 ... L2L_MAX
+     
+     L31 L32 L33 ... L3L_MAX
+     
+     Wavelength should be in um. Total number of values should be K_MAX*3 + L_MAX*3 + 3
+     
+     */
+    
+    
+    if(grinSurfaceIndex != -1){
         
-        if(currMedia.GRINflag){
-            // Use Sellmeier coefficients
-            currMedia.k.push_back(vals[i+3]);
-            currMedia.k.push_back(vals[i+4]);
-            currMedia.k.push_back(vals[i+5]);
-            currMedia.k.push_back(vals[i+6]);
-            currMedia.k.push_back(vals[i+7]);
-            
-            currMedia.L.push_back(vals[i+8]);
-            currMedia.L.push_back(vals[i+9]);
-            currMedia.L.push_back(vals[i+10]);
-        }else{
-            // Use Schott coefficients
-            currMedia.a.push_back(vals[i+3]);
-            currMedia.a.push_back(vals[i+4]);
-            currMedia.a.push_back(vals[i+5]);
-            currMedia.a.push_back(vals[i+6]);
-            currMedia.a.push_back(vals[i+7]);
+        vals.clear();
+        
+        // Check to see if there is valid input in the lens file.
+        if (!ReadFloatFile(grinFileName.c_str(), &vals)) {
+            Warning("Unable to read GRIN file!");
+            return;
         }
-        lensMedia.push_back(currMedia);
+        
+        GRINelement grin;
+        float minWavelength = vals[0]*1000; // We operate in nm
+        float maxWavelength = vals[1]*1000;
+        float refWavelength = vals[2]*1000;
+        float K_max = (int)vals[3];
+        float L_max = (int)vals[4];
+        
+        if(vals.size() != (K_max*3+L_max*3+3)){
+            Warning("Wrong number of float values in lens file! Maybe check the format again?");
+        }
+        grin.K1 = 0; grin.K2 = 0; grin.K3 = 0;
+        grin.L1 = 0; grin.L2 = 0; grin.L3 = 0;
+        for(int i = 0; i < K_max; i++){
+            float wavePow = pow(refWavelength,(i+1)-1);
+            grin.K1 += vals[5+i]*wavePow;
+            grin.K2 += vals[5+K_max+i]*wavePow;
+            grin.K3 += vals[5+2*K_max+i]*wavePow;
+        }
+        
+
+        
+        
     }
-    */
     
+    //
     // -------------------------
     // --- Set Up Eye Model ----
     // -------------------------
@@ -301,8 +317,8 @@ RealisticEyeCamera::RealisticEyeCamera(const AnimatedTransform &cam2world,
         std::cout << "Eye IOR curves have been set." << std::endl;
     }
     
-    // TEMP COMPATIBILITY
-    filmDiag = lensEls[lensEls.size()-1].semiDiameter;
+    // To calculate the "film diagonal", we use the retina semi-diameter. The film diagonal is the diagonal of the rectangular image rendered out by PBRT, in real units. Since we restrict samples to a circular image, we can calculate the film diagonal to be the same as a square that circumscribes the circular image.
+    filmDiag = retinaSemiDiam*1.4142*2; // sqrt(2)*2
     
     // We are going to use our own error handling for gsl to prevent it from crashing the moment a ray doesn't intersect.
     gsl_set_error_handler_off();
@@ -540,9 +556,6 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
     
     // GenerateRay() should return the weight of the generated ray
     
-    // TODO: Deal with curved retina. For now we will just substitute the image diagonal with the semi-diameter*2.
-    float filmDiag = lensEls[0].semiDiameter;
-    
     // Determine the size of the sensor in real world units (i.e. convert from pixels to millimeters).
     float aspectRatio = (float)film->xResolution/(float)film->yResolution;
     float width = filmDiag /sqrt((1.f + 1.f/(aspectRatio * aspectRatio)));
@@ -557,23 +570,55 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
     startingPoint.y = startingPoint.y * height/2.f;
     startingPoint.z = -retinaDistance;
     
-    //curved Sensor stuff - sensor offset with sperical sensors still needs to be evaluated
-    /*
-    if (curveRadius != 0)
+
+    if (retinaRadius != 0)
     {
-        //convert to angle
-        float startTheta = startingPoint.x/curveRadius;
-        float startPhi = startingPoint.y/curveRadius;
+        // Right now the code only lets you curve the sensor toward the scene and not the other way around. See diagram:
+        /*    
         
-        //convert to x,y,z, on sphere
-        startingPoint.x = curveRadius * cos(startPhi) * sin(startTheta);   //sign convention needs to be checked
-        startingPoint.z = curveRadius * cos(startPhi) * cos(startTheta);
-        startingPoint.y = curveRadius * sin(startPhi);
-        float sphereCenter =  (-retinaDistance - curveRadius) ;
-        startingPoint.z = sphereCenter + startingPoint.z;  //check the sign convention here...
+         The distance between the zero point on the z-axis (i.e. the lens element closest to the sensor) and the dotted line will be equal to the "retinaDistance." The retina curvature is defined by the "retinaRadius" and it's height in the y and x direction is defined by the "retinaSemiDiam."
+         
+         
+                                        :
+                                     |  :
+                                      | :
+                         | | |         |:
+           scene <------ | | | <----   |:
+                         | | |         |:
+                     Lens System      | :
+                                     |  :
+                                        :
+                                  retina
+            <---- +z
+         
+         */
+
+        // Limit sample points to a circle within the retina semi-diameter
+        if(sqrt(startingPoint.x*startingPoint.x + startingPoint.y*startingPoint.y) > retinaSemiDiam){
+            return 0.f;
+        }
+        
+        // Calculate the distance of a disc that fits inside the curvature of the retina.
+        float zDiscDistance = -1*sqrt(retinaDistance*retinaDistance-retinaSemiDiam*retinaSemiDiam);
+        
+        // If we are within this radius, project each point out onto a sphere. There may be some issues here with even sampling, since this is a direct projection...
+        double el = atan(startingPoint.x/zDiscDistance);
+        double az = atan(startingPoint.y/zDiscDistance);
+        
+        // Convert spherical coordinates to cartesian coordinates (note: we switch up the x,y,z axis to match our conventions)
+        float xc,yc,zc, rcoselev;
+        xc = retinaRadius*sin(el);
+        rcoselev = retinaRadius*cos(el);
+        zc = -1*(rcoselev*cos(az)); // The -1 is to account for the curavure described above in the diagram
+        yc = rcoselev*sin(az);
+        
+        zc = zc + -1*retinaDistance + retinaRadius; // Move the z coordinate out to correct retina distance
+        
+        startingPoint = Point(xc,yc,zc);
+        
         
     }
-    */
+    
     
     float lensU, lensV;
     ConcentricSampleDisk(sample.lensU, sample.lensV, &lensU, &lensV);
@@ -734,12 +779,12 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
                 
                 float n1,n2;
                 
-                n1 = lookUpIOR(lensEls[i].mediumIndex, ray->wavelength);
+                n1 = lookUpIOR(lensEls[i].mediumIndex, *ray);
                 
                 // If we're at the lens surface closest to the scene, n2 should be air.
                 if (i-1 >= 0){
                     
-                    n2 = lookUpIOR(lensEls[i-1].mediumIndex, ray->wavelength);
+                    n2 = lookUpIOR(lensEls[i-1].mediumIndex,*ray);
                     
                     // Trisha: If we're entering the aperture (sometimes we put n2 == 0 when that is the case) we skip the n2 == 0 and apply the next medium.
                     // (We put this in the current if statement so we can handle the unique case when the aperture is the first element.)
@@ -755,7 +800,7 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
                     //           aperture, [i-1]
                     
                     if(n2 == 0)
-                        n2 = lookUpIOR(lensEls[i-2].mediumIndex, ray->wavelength);
+                        n2 = lookUpIOR(lensEls[i-2].mediumIndex, *ray);
                     
                 }
                 else{
@@ -833,15 +878,21 @@ float RealisticEyeCamera::BiconicZ(float x, float y, LensElementEye currElement)
 }
 
 // Given the mediumIndex, load up the right spectra from the ones read in through ior1, ior2, etc. Then find the corresponding IOR for the given ray wavelength.
-float RealisticEyeCamera::lookUpIOR(int mediumIndex, float wavelength)const{
+float RealisticEyeCamera::lookUpIOR(int mediumIndex, const Ray &ray)const{
     
     float n;
-    if(chromaticAberrationEnabled){
-        iorSpectra[mediumIndex-1].GetValueAtWavelength(wavelength,&n);
-    }else{
-        iorSpectra[mediumIndex-1].GetValueAtWavelength(550,&n);
-    }
     
+    if(mediumIndex == grinSurfaceIndex){
+        // A GRIN lens
+        
+    }else{
+        // Standard media
+        if(chromaticAberrationEnabled){
+            iorSpectra[mediumIndex-1].GetValueAtWavelength(ray.wavelength,&n);
+        }else{
+            iorSpectra[mediumIndex-1].GetValueAtWavelength(550,&n);
+        }
+    }
     return n;
 }
 

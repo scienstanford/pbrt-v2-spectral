@@ -22,6 +22,14 @@ struct LensElementEye{
     float conicConstantY;
 };
 
+struct GRINelement{
+//    float minWavelength, maxWavelength, refWavelength;
+//    int K_max, L_max;
+    float K1, K2, K3; // We precalculate these using the Sellmeier formula
+    float L1, L2, L3;
+    
+};
+
 // TEMP: Don't use this for now.
 /*
 struct MediumElement{
@@ -40,7 +48,6 @@ public:
                        float hither, float yon,
                        float sopen, float sclose,
                        string specfile,
-                       string mediumFile,
                        float pupDiam,
                        float lensDecenterX,
                        float lensDecnterY,
@@ -53,7 +60,8 @@ public:
                        bool IORforEyeFlagIn,
                        bool flipRad,
                        vector<Spectrum> iorSpectra,
-                       int grinSurfaceIndex);
+                       int grinSurfaceIndex,
+                       string grinFile);
     
     
     ~RealisticEyeCamera();
@@ -70,6 +78,7 @@ private:
     float ShutterOpen;
     float ShutterClose;
     Film * film;
+    float filmDiag;
     
     // Lens information
     vector<LensElementEye> lensEls;
@@ -90,10 +99,10 @@ private:
     // GRIN lens
     bool grinLensFlag;
     int grinSurfaceIndex;
-    
-    // Variables for initial compatibility, we will get rid of these later
-    float filmDiag;
-    
+    vector<float> wavelengths;
+    vector<float> radialSamples ;
+    vector<Spectrum> grinIORsamples;
+
     // Flags for speed
     bool chromaticAberrationEnabled;
     bool IORforEyeEnabled;
@@ -105,7 +114,7 @@ private:
     bool IntersectLensEl(const Ray &r, float *tHit, float radius, Vector dist, Vector & normalVec);
     bool IntersectLensElAspheric(const Ray &r, float *tHit, LensElementEye currElement, float zShift, Vector *n) const;
     void applySnellsLaw(float n1, float n2, float lensRadius, Vector &normalVec, Ray * ray ) const;
-    float lookUpIOR(int mediumIndex, float wavelength) const;
+    float lookUpIOR(int mediumIndex, const Ray &ray) const;
     
     // Handy method to explicity solve for the z(x,y) at a given point (x,y), for the biconic SAG
     float BiconicZ(float x, float y, LensElementEye currElement) const;
