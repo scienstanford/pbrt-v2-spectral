@@ -97,7 +97,7 @@ RealisticEyeCamera *CreateRealisticEyeCamera(const ParamSet &params,
     }
     
     // These are additional parameters we need to specify.
-    float pupDiam = params.FindOneFloat("pupilDiameter", 1.0); //mm
+    float pupDiam = params.FindOneFloat("pupilDiameter", 4.0); //mm
     float lensDecenterX = params.FindOneFloat("lensDecenterX",0); //mm
     float lensDecenterY = params.FindOneFloat("lensDecenterY",0); //mm
     float lensTiltX = params.FindOneFloat("lensTiltX",0); //degrees
@@ -383,7 +383,13 @@ bool RealisticEyeCamera::IntersectLensElAspheric(const Ray &r, float *tHit, Lens
     gsl_root_fsolver *s;
     double root = 0;
     double x_lo = 0.0;
-    double x_hi = 50; //currElement.thickness*2; // thit will probably be less than this
+    double x_hi;
+    if(currElement.thickness == 0){
+        // Probably the surface closest to the retina.
+        x_hi = retinaDistance*2;
+    }else{
+        x_hi = currElement.thickness*2; // thit will probably be less than this
+    }
     gsl_function F;
     
     // DEBUG
@@ -431,7 +437,7 @@ bool RealisticEyeCamera::IntersectLensElAspheric(const Ray &r, float *tHit, Lens
             
             // Check if intersection is within the semi-diameter of the lens, if not we return false (no intersect)
             // (If we don't do this here, we might get a complex normal which would crash the rendering.)
-            if(intersect.x * intersect.x + intersect.y * intersect.y >= (currElement.semiDiameter * currElement.semiDiameter / 4.f)){
+            if(intersect.x * intersect.x + intersect.y * intersect.y > (currElement.semiDiameter * currElement.semiDiameter)){
                 return false;
             }
             
@@ -467,7 +473,7 @@ bool RealisticEyeCamera::IntersectLensElAspheric(const Ray &r, float *tHit, Lens
         printf ("%5d [%.7f, %.7f] %.7f \n",
                 iter, x_lo, x_hi,
                 root);
-         */
+        */
     }
     while (status == GSL_CONTINUE && iter < max_iter);
     
@@ -594,12 +600,12 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
          */
 
         // Limit sample points to a circle within the retina semi-diameter
-        if(sqrt(startingPoint.x*startingPoint.x + startingPoint.y*startingPoint.y) > retinaSemiDiam){
+        if((startingPoint.x*startingPoint.x + startingPoint.y*startingPoint.y) > (retinaSemiDiam*retinaSemiDiam)){
             return 0.f;
         }
         
         // Calculate the distance of a disc that fits inside the curvature of the retina.
-        float zDiscDistance = -1*sqrt(retinaDistance*retinaDistance-retinaSemiDiam*retinaSemiDiam);
+        float zDiscDistance = -1*sqrt(retinaRadius*retinaRadius-retinaSemiDiam*retinaSemiDiam);
         
         // If we are within this radius, project each point out onto a sphere. There may be some issues here with even sampling, since this is a direct projection...
         double el = atan(startingPoint.x/zDiscDistance);
@@ -607,15 +613,14 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
         
         // Convert spherical coordinates to cartesian coordinates (note: we switch up the x,y,z axis to match our conventions)
         float xc,yc,zc, rcoselev;
-        xc = retinaRadius*sin(el);
+        xc = -1*retinaRadius*sin(el); // TODO: Confirm this flip?
         rcoselev = retinaRadius*cos(el);
         zc = -1*(rcoselev*cos(az)); // The -1 is to account for the curavure described above in the diagram
-        yc = rcoselev*sin(az);
+        yc = -1*rcoselev*sin(az); // TODO: Confirm this flip?
         
         zc = zc + -1*retinaDistance + retinaRadius; // Move the z coordinate out to correct retina distance
         
         startingPoint = Point(xc,yc,zc);
-        
         
     }
     
@@ -646,13 +651,14 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
     ray->d = Normalize(pointOnLens - ray->o);
     ray->wavelength = tempWavelength;  //so that wavelength information is retained.
     
-    // DEBUG:
-//    std::cout << "\n\n\n" << std::endl;
-//    std::cout << "Starting point: " << ray->o.x << " " << ray->o.y << " " << ray->o.z << std::endl;
-//    std::cout << "Direction: " << ray->d.x << " " << ray->d.y << " " << ray->d.z << std::endl;
-    
-    // vdb_color(.7, 0, 0);
-    // vdb_point(pointOnLens.x, pointOnLens.y, pointOnLens.z);
+    // DEBUG
+    /*
+    startingPoint = Point(0.0f,-6.6371236384f,-14.317729160);
+    pointOnLens = Point(0.0f,0.045694002625f,0.00017400020233f);
+    ray->o = startingPoint;
+    ray->d = Normalize(pointOnLens - ray->o);
+    ray->wavelength = 680;
+    */
     
     // --------------------------------------------------------
     // --- Trace through the lens elements of the main lens ---
@@ -663,15 +669,15 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
     for (int i = lensEls.size()-1; i>=0 ; i--)
     {
         // DEBUG
-//        std::cout << "i = " << i << std::endl;
+        //std::cout << "i = " << i << std::endl;
         
         ray->o = startingPoint;
         lensDistance += lensEls[i].thickness;
         
-        // Check
-        if(i == lensEls.size()-1 && lensDistance != 0){
-            Error("Lens thickness must be zero for element closest to the sensor.");
-        }
+        // DEBUG
+        // ----
+//        std::cout << "New ray starting point: " << ray->o.x << " " << ray->o.y << " " << ray->o.z << std::endl;
+//        std::cout << "New ray dir: " << ray->d.x << " " << ray->d.y << " " << ray->d.z << std::endl;
         
         float tHit = 0;
         bool intersected = false;
@@ -696,6 +702,12 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
 
             // Move ray to start at intersection
             startingPoint = intersectPoint;
+            
+            // Check if ray makes it through the aperture
+            if((intersectPoint.x * intersectPoint.x + intersectPoint.y * intersectPoint.y) > (lensEls[i].semiDiameter * lensEls[i].semiDiameter)){
+                return 0.f;
+            }
+            
             
         }
         else
@@ -733,31 +745,6 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
                 
                 //DEBUG
                 // std::cout << "Intersect point: " << intersectPoint.x << " " << intersectPoint.y << " " << intersectPoint.z << std::endl;
-                
-                // TL: Andy had some way of visualizing the rays...
-                // vdb visualization
-                
-                /*
-                 //float currentT = 0;
-                 
-                 while (currentT < *tHit)
-                 {
-                 Point currentPoint(0,0,0);
-                 currentPoint.x = currentT * ray->d.x + ray->o.x;
-                 currentPoint.y = currentT * ray->d.y  + ray->o.y;
-                 currentPoint.z = currentT * ray->d.z  + ray->o.z;
-                 
-                 // if (currentT == 0)
-                 //     vdb_color(.7, 0, 0);
-                 // else
-                 //     vdb_color(0, 0, .7);
-                 // vdb_point(currentPoint.x, currentPoint.y, currentPoint.z);
-                 currentT += .5;
-                 
-                 vdb_color(0, .7, 0);
-                 vdb_point(intersectPoint.x, intersectPoint.y, intersectPoint.z);
-                 
-                 }*/
                 
                 
                 // ---- Apply Snell's Law ----
