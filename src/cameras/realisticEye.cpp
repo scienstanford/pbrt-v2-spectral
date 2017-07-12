@@ -388,17 +388,19 @@ bool RealisticEyeCamera::IntersectLensElAspheric(const Ray &r, float *tHit, Lens
         // Probably the surface closest to the retina.
         x_hi = retinaDistance*2;
     }else{
-        x_hi = currElement.thickness*2; // thit will probably be less than this
+        x_hi = currElement.thickness*1.5; // thit will probably be less than this
     }
     gsl_function F;
     
     // DEBUG
-//    std::cout << "radiusX = " << currElement.radiusX << std::endl;
-//    std::cout << "radiusY = " << currElement.radiusY << std::endl;
-//    std::cout << "conicConstantX = " << currElement.conicConstantX << std::endl;
-//    std::cout << "conicConstantY = " << currElement.conicConstantY << std::endl;
-//    std::cout << "objSpaceRay.o = " << objSpaceRay.o.x << "," << objSpaceRay.o.y << "," << objSpaceRay.o.z << std::endl;
-//    std::cout << "objSpaceRay.d = " << objSpaceRay.d.x << "," << objSpaceRay.d.y << "," << objSpaceRay.d.z << std::endl;
+    /*
+    std::cout << "radiusX = " << currElement.radiusX << std::endl;
+    std::cout << "radiusY = " << currElement.radiusY << std::endl;
+    std::cout << "conicConstantX = " << currElement.conicConstantX << std::endl;
+    std::cout << "conicConstantY = " << currElement.conicConstantY << std::endl;
+    std::cout << "objSpaceRay.o = " << objSpaceRay.o.x << "," << objSpaceRay.o.y << "," << objSpaceRay.o.z << std::endl;
+    std::cout << "objSpaceRay.d = " << objSpaceRay.d.x << "," << objSpaceRay.d.y << "," << objSpaceRay.d.z << std::endl;
+    */
     
     struct biconic_params params = {currElement.radiusX,currElement.radiusY,currElement.conicConstantX,currElement.conicConstantY,objSpaceRay};
     F.function = &BiconicSag;
@@ -608,8 +610,8 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
         float zDiscDistance = -1*sqrt(retinaRadius*retinaRadius-retinaSemiDiam*retinaSemiDiam);
         
         // If we are within this radius, project each point out onto a sphere. There may be some issues here with even sampling, since this is a direct projection...
-        double el = atan(startingPoint.x/zDiscDistance);
-        double az = atan(startingPoint.y/zDiscDistance);
+        float el = atan(startingPoint.x/zDiscDistance);
+        float az = atan(startingPoint.y/zDiscDistance);
         
         // Convert spherical coordinates to cartesian coordinates (note: we switch up the x,y,z axis to match our conventions)
         float xc,yc,zc, rcoselev;
@@ -653,11 +655,19 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
     
     // DEBUG
     /*
-    startingPoint = Point(0.0f,-6.6371236384f,-14.317729160);
-    pointOnLens = Point(0.0f,0.045694002625f,0.00017400020233f);
+    // Scene to retina
+    startingPoint = Point(0,-0.049826186066,-16.319896556);
+    pointOnLens = Point(0,1.5356985841,0.21363301563);
     ray->o = startingPoint;
     ray->d = Normalize(pointOnLens - ray->o);
-    ray->wavelength = 680;
+    ray->wavelength = 550;
+    
+    // Retina to scene
+    startingPoint = Point(0,0,-16.3203);
+    pointOnLens = Point(0,1.5282608603,0.21148055203);
+    ray->o = startingPoint;
+    ray->d = Normalize(pointOnLens - ray->o);
+    ray->wavelength = 550;
     */
     
     // --------------------------------------------------------
@@ -668,16 +678,18 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
     
     for (int i = lensEls.size()-1; i>=0 ; i--)
     {
-        // DEBUG
-        //std::cout << "i = " << i << std::endl;
         
         ray->o = startingPoint;
         lensDistance += lensEls[i].thickness;
         
         // DEBUG
         // ----
-//        std::cout << "New ray starting point: " << ray->o.x << " " << ray->o.y << " " << ray->o.z << std::endl;
-//        std::cout << "New ray dir: " << ray->d.x << " " << ray->d.y << " " << ray->d.z << std::endl;
+        /*
+        std::cout << "i = " << i << std::endl;
+        std::cout << "start " << ray->o.x << " " << ray->o.y << " " << ray->o.z << std::endl;
+        std::cout << "dir " << ray->d.x << " " << ray->d.y << " " << ray->d.z << std::endl;
+         */
+        // ----
         
         float tHit = 0;
         bool intersected = false;
@@ -793,7 +805,7 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
                 else{
                     n2 = 1;
                 }
-
+                //std::cout << "n1 = " << n1 << " , n2 = " << n2 << std::endl;
                 applySnellsLaw( n1,  n2,  0, normalVec, ray );
                 
                 // --- Update ray starting point ---
@@ -803,35 +815,24 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
             }
             else
             {
-                
-                // TL: More of Andy's visualization code
-                /*
-                 //did not intersect -> draw red rays
-                 float currentT = 0;
-                 while (currentT < 10)
-                 {
-                 Point currentPoint(0,0,0);
-                 currentPoint.x = currentT * ray->d.x + ray->o.x;
-                 currentPoint.y = currentT * ray->d.y  + ray->o.y;
-                 currentPoint.z = currentT * ray->d.z  + ray->o.z;
-                 
-                 //if (currentT == 0)
-                 //    vdb_color(.7, 0, 0);
-                 //else
-                 //    vdb_color(1, 0, 0);
-                 //vdb_point(currentPoint.x, currentPoint.y, currentPoint.z);
-                 currentT += .5;
-                 }*/
-                
                 return 0.f;
             }
         }
         
-        // DEBUG:
-//        std::cout << "Starting point: " << ray->o.x << " " << ray->o.y << " " << ray->o.z << std::endl;
-//        std::cout << "Direction: " << ray->d.x << " " << ray->d.y << " " << ray->d.z << std::endl;
         
     }
+    
+    ray->o = startingPoint;
+    
+    // DEBUG
+    // ----
+    /*
+    std::cout << " " << std::endl;
+    std::cout << "start " << startingPoint.x << " " << startingPoint.y << " " << startingPoint.z << std::endl;
+    std::cout << "start (ray) " << ray->o.x << " " << ray->o.y << " " << ray->o.z << std::endl;
+    std::cout << "dir " << ray->d.x << " " << ray->d.y << " " << ray->d.z << std::endl;
+     */
+    // ----
     
     ray->time = Lerp(sample.time, ShutterOpen, ShutterClose);
     CameraToWorld(*ray, ray);
