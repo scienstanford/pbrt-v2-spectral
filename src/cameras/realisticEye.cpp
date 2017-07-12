@@ -225,8 +225,20 @@ RealisticEyeCamera::RealisticEyeCamera(const AnimatedTransform &cam2world,
         
         // A radius of zero in BOTH x and y directions indicates an aperture. We should be careful of this though, since sometimes we may want to define a flat surface...
         // If the surface is an aperture, we set it's size to be equal to the pupil diameter specified.
-        if (currentLensEl.radiusX == 0 && currentLensEl.radiusY == 0 )
+        if (currentLensEl.radiusX == 0 && currentLensEl.radiusY == 0 ){
             currentLensEl.semiDiameter = pupilDiameter/2;
+        }
+        else{
+            // We have to do a semi-diameter check here. As we change accomodation, we also change the radius of curvature, and we don't want the semi-diameter to be bigger than the radius. This manifests as a square root of a negative number in equation 1 on Einighammer et al. 2009.
+            // TODO: This check is sort of hack-y, is there a better mathematical way to do this?
+            float smallerR = min(currentLensEl.radiusX,currentLensEl .radiusY);
+            float biggerK = max(currentLensEl.conicConstantX,currentLensEl.conicConstantY);
+            if((currentLensEl.semiDiameter*currentLensEl.semiDiameter) >= (smallerR*smallerR/(1+biggerK))){
+                Warning("Changing semidiameter of an element to match radius/asphericity geometry.");
+                currentLensEl.semiDiameter = 0.95 * sqrt((smallerR*smallerR/(1+biggerK))); // 0.95 is to add some buffer zone, since rays act very strangely when they get too close to the edge of the conical surface.
+            }
+        }
+        
         
         lensEls.push_back(currentLensEl);
     }
@@ -681,6 +693,11 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
         
         ray->o = startingPoint;
         lensDistance += lensEls[i].thickness;
+        
+        // If the ray direction is zero, there is probably internal reflection going on somewhere. We will just terminate the ray here to avoid assert errors.
+        if(ray->d == Vector(0,0,0)){
+            return 0.f;
+        }
         
         // DEBUG
         // ----
