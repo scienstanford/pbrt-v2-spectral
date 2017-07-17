@@ -1152,6 +1152,8 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
         //------------end diffraction-----------------
     }
     
+    ray->o = startingPoint;
+    
     ray->time = Lerp(sample.time, ShutterOpen, ShutterClose);
     CameraToWorld(*ray, ray);
     ray->d = Normalize(ray->d);
