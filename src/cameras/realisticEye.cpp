@@ -55,7 +55,7 @@ double BiconicSag(double t, void *params){
         g_term = 0.001;
     }
     
-    g = 1 + sqrtf(g_term);
+    g = 1 + sqrt(g_term);
     
     return z-f/g;
 }
@@ -128,12 +128,11 @@ RealisticEyeCamera *CreateRealisticEyeCamera(const ParamSet &params,
     
     // Flags for realism/speed
     bool chromaticFlag = params.FindOneBool("chromaticAberrationEnabled", 0.0);
-    bool IORforEyeEnabled = params.FindOneBool("IORforEyeEnabled", 0.0);
     
     // Flags for convention
     bool flipRadFlag = params.FindOneBool("flipLensRadius", 0.0);
     
-    return new RealisticEyeCamera(cam2world,film,hither,yon,shutteropen,shutterclose,specfile,pupDiam,lensDecenterX,lensDecenterY,lensTiltX,lensTiltY,retinaDistance,retinaRadius,retinaSemiDiam,chromaticFlag,IORforEyeEnabled,flipRadFlag,iorSpectra,grinSurfaceIndex,grinSurfaceFile);
+    return new RealisticEyeCamera(cam2world,film,hither,yon,shutteropen,shutterclose,specfile,pupDiam,lensDecenterX,lensDecenterY,lensTiltX,lensTiltY,retinaDistance,retinaRadius,retinaSemiDiam,chromaticFlag,flipRadFlag,iorSpectra,grinSurfaceIndex,grinSurfaceFile);
 }
 
 
@@ -153,7 +152,6 @@ RealisticEyeCamera::RealisticEyeCamera(const AnimatedTransform &cam2world,
                                        float rR,
                                        float rSD,
                                        bool chromaticFlag,
-                                       bool iorFlag,
                                        bool flipRadFlag,
                                        vector<Spectrum> iorS,
                                        int gSI,
@@ -177,7 +175,6 @@ RealisticEyeCamera::RealisticEyeCamera(const AnimatedTransform &cam2world,
     grinSurfaceIndex = gSI;
     if(grinSurfaceIndex != -1) grinLensFlag = true;
     
-    IORforEyeEnabled = iorFlag;
     chromaticAberrationEnabled = chromaticFlag;
     flipLensRadius = flipRadFlag;
     
@@ -229,12 +226,15 @@ RealisticEyeCamera::RealisticEyeCamera(const AnimatedTransform &cam2world,
             currentLensEl.semiDiameter = pupilDiameter/2;
         }
         else{
-            // We have to do a semi-diameter check here. As we change accomodation, we also change the radius of curvature, and we don't want the semi-diameter to be bigger than the radius. This manifests as a square root of a negative number in equation 1 on Einighammer et al. 2009.
+            // We have to do a semi-diameter check here. As we change accommodation, we also change the radius of curvature, and we don't want the semi-diameter to be bigger than the radius. This manifests as a square root of a negative number in equation 1 on Einighammer et al. 2009.
             // TODO: This check is sort of hack-y, is there a better mathematical way to do this?
             float smallerR = min(currentLensEl.radiusX,currentLensEl .radiusY);
             float biggerK = max(currentLensEl.conicConstantX,currentLensEl.conicConstantY);
-            if((currentLensEl.semiDiameter*currentLensEl.semiDiameter) >= (smallerR*smallerR/(1+biggerK))){
-                Warning("Changing semidiameter of an element to match radius/asphericity geometry.");
+//            if((currentLensEl.semiDiameter*currentLensEl.semiDiameter) >= (smallerR*smallerR/(1+biggerK))){
+//                Warning("Changing semidiameter of an element to match radius/asphericity geometry.");
+//                currentLensEl.semiDiameter = 0.95 * sqrt((smallerR*smallerR/(1+biggerK))); // 0.95 is to add some buffer zone, since rays act very strangely when they get too close to the edge of the conical surface.
+//            }
+            if(currentLensEl.semiDiameter*currentLensEl.semiDiameter*(1+biggerK)/(smallerR*smallerR) > 1.0f ){
                 currentLensEl.semiDiameter = 0.95 * sqrt((smallerR*smallerR/(1+biggerK))); // 0.95 is to add some buffer zone, since rays act very strangely when they get too close to the edge of the conical surface.
             }
         }
@@ -312,23 +312,6 @@ RealisticEyeCamera::RealisticEyeCamera(const AnimatedTransform &cam2world,
         
     }
     
-    //
-    // -------------------------
-    // --- Set Up Eye Model ----
-    // -------------------------
-    
-    // If we are ray tracing through the eye and want chromatic aberration, we set up the IOR curves to be used, i.e. n(lambda)
-    // Load values into a spectrum class. These values are interpolated to the wave samples specified in "spectrum.h"
-    if(IORforEyeEnabled){
-        corneaIOR = Spectrum::FromSampled(eyeWaveSamples, corneaIORraw, numEyeWaveSamples);
-        aqueousIOR = Spectrum::FromSampled(eyeWaveSamples, aqueousIORraw, numEyeWaveSamples);
-        eyeLensIOR = Spectrum::FromSampled(eyeWaveSamples, lensIORraw, numEyeWaveSamples);
-        vitreousIOR = Spectrum::FromSampled(eyeWaveSamples, vitreousIORraw, numEyeWaveSamples);
-        
-        //DEBUG
-        std::cout << "Eye IOR curves have been set." << std::endl;
-    }
-    
     // To calculate the "film diagonal", we use the retina semi-diameter. The film diagonal is the diagonal of the rectangular image rendered out by PBRT, in real units. Since we restrict samples to a circular image, we can calculate the film diagonal to be the same as a square that circumscribes the circular image.
     filmDiag = retinaSemiDiam*1.4142*2; // sqrt(2)*2
     
@@ -385,6 +368,12 @@ bool RealisticEyeCamera::IntersectLensElAspheric(const Ray &r, float *tHit, Lens
     // where u(x,y) is the SAG of the surface, defined in Eq.1 of Einighammer et al. 2009 and in the Zemax help page under biconic surfaces.
     // We can use this fact to solve for thit. If the surface is not a sphere, this is a messy polynomial. So instead we use a numeric root-finding method (Van Wijingaarden-Dekker-Brent's Method.) This method is available in the GSL library.
     
+    // DEBUG
+    /*
+    std::cout << "r.o = " << r.o.x << "," << r.o.y << "," << r.o.z << std::endl;
+    std::cout << "r.d = " << r.d.x << "," << r.d.y << "," << r.d.z << std::endl;
+    */
+    
     // Move ray to object(lens) space.
     Ray objSpaceRay = r;
     objSpaceRay.o = objSpaceRay.o + Vector(0,0,zShift);
@@ -423,9 +412,19 @@ bool RealisticEyeCamera::IntersectLensElAspheric(const Ray &r, float *tHit, Lens
 
     status = gsl_root_fsolver_set (s, &F, x_lo, x_hi);
     if(status != 0){
-        // Ray probably does not intersect. TODO: Can we check this?
+        // Ray probably does not intersect. This might depend on the x_hi set above, i.e. if it's too small OR too large. TODO: Can we check this?
         return false;
     }
+    
+    // DEBUG
+    /*
+    printf ("using %s method\n",
+            gsl_root_fsolver_name (s));
+    
+    printf ("%5s [%9s, %9s] %9s %10s %9s\n",
+            "iter", "lower", "upper", "root",
+            "err", "err(est)");
+    */
     
     do
     {
@@ -435,16 +434,27 @@ bool RealisticEyeCamera::IntersectLensElAspheric(const Ray &r, float *tHit, Lens
         x_lo = gsl_root_fsolver_x_lower (s);
         x_hi = gsl_root_fsolver_x_upper (s);
         status = gsl_root_test_interval (x_lo, x_hi,
-                                         0, 0.001);
+                                         0, 0.0001);
 
         if (status == GSL_SUCCESS){
  
             // DEBUG
-//            printf ("Converged:\n");
-//            printf ("%5d [%.7f, %.7f] %.7f \n",
-//                    iter, x_lo, x_hi, root);
+            /*
+            printf ("Converged:\n");
+            printf ("%5d [%.7f, %.7f] %.7f %+.7f %.7f\n",
+                    iter, x_lo, x_hi,
+                    root, root - root,
+                    x_hi - x_lo);
+            */
             
             gsl_root_fsolver_free (s);
+            
+            // DEBUG
+            /*
+            std::cout << "root = " << root << std::endl;
+            std::cout << "r.o = " << r.o.x << "," << r.o.y << "," << r.o.z << std::endl;
+            std::cout << "r.d = " << r.d.x << "," << r.d.y << "," << r.d.z << std::endl;
+            */
             
             *tHit = root;
             Point intersect = r(*tHit);
@@ -484,9 +494,10 @@ bool RealisticEyeCamera::IntersectLensElAspheric(const Ray &r, float *tHit, Lens
         
         // For debugging
         /*
-        printf ("%5d [%.7f, %.7f] %.7f \n",
+        printf ("%5d [%.7f, %.7f] %.7f %+.7f %.7f\n",
                 iter, x_lo, x_hi,
-                root);
+                root, root - root,
+                x_hi - x_lo);
         */
     }
     while (status == GSL_CONTINUE && iter < max_iter);
@@ -590,7 +601,6 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
     startingPoint.y = startingPoint.y * height/2.f;
     startingPoint.z = -retinaDistance;
     
-
     if (retinaRadius != 0)
     {
         // Right now the code only lets you curve the sensor toward the scene and not the other way around. See diagram:
@@ -638,7 +648,6 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
         
     }
     
-    
     float lensU, lensV;
     ConcentricSampleDisk(sample.lensU, sample.lensV, &lensU, &lensV);
     
@@ -665,18 +674,19 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
     ray->d = Normalize(pointOnLens - ray->o);
     ray->wavelength = tempWavelength;  //so that wavelength information is retained.
     
+    
     // DEBUG
     /*
     // Scene to retina
-    startingPoint = Point(0,-0.049826186066,-16.319896556);
-    pointOnLens = Point(0,1.5356985841,0.21363301563);
+    startingPoint = Point(0,0.00081193431816,-16.319999973);
+    pointOnLens = Point(0,1.544122632,0.21476753379);
     ray->o = startingPoint;
     ray->d = Normalize(pointOnLens - ray->o);
     ray->wavelength = 550;
     
     // Retina to scene
-    startingPoint = Point(0,0,-16.3203);
-    pointOnLens = Point(0,1.5282608603,0.21148055203);
+    startingPoint = Point(0,0,-16.3200);
+    pointOnLens = Point(0,1.5330684279,0.2229);
     ray->o = startingPoint;
     ray->d = Normalize(pointOnLens - ray->o);
     ray->wavelength = 550;
@@ -702,6 +712,7 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
         // DEBUG
         // ----
         /*
+        std::cout << "\n" << std::endl;
         std::cout << "i = " << i << std::endl;
         std::cout << "start " << ray->o.x << " " << ray->o.y << " " << ray->o.z << std::endl;
         std::cout << "dir " << ray->d.x << " " << ray->d.y << " " << ray->d.z << std::endl;
@@ -757,7 +768,7 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
             //   :|
             //   :|
             //   :|
-            //   : \
+            //   : \d_zema
             //   :  \
             //   :   \
             //  z=0
@@ -773,7 +784,7 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
                 intersectPoint = (*ray)(tHit);
                 
                 //DEBUG
-                // std::cout << "Intersect point: " << intersectPoint.x << " " << intersectPoint.y << " " << intersectPoint.z << std::endl;
+               // std::cout << "Intersect point: " << intersectPoint.x << " " << intersectPoint.y << " " << intersectPoint.z << std::endl;
                 
                 
                 // ---- Apply Snell's Law ----
@@ -822,9 +833,8 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
                 else{
                     n2 = 1;
                 }
-                //std::cout << "n1 = " << n1 << " , n2 = " << n2 << std::endl;
-                applySnellsLaw( n1,  n2,  0, normalVec, ray );
                 
+                applySnellsLaw( n1,  n2,  0, normalVec, ray );
                 // --- Update ray starting point ---
                 
                 startingPoint = intersectPoint;
@@ -842,14 +852,14 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
     ray->o = startingPoint;
     
     // DEBUG
-    // ----
     /*
-    std::cout << " " << std::endl;
-    std::cout << "start " << startingPoint.x << " " << startingPoint.y << " " << startingPoint.z << std::endl;
-    std::cout << "start (ray) " << ray->o.x << " " << ray->o.y << " " << ray->o.z << std::endl;
-    std::cout << "dir " << ray->d.x << " " << ray->d.y << " " << ray->d.z << std::endl;
-     */
     // ----
+    std::cout << "\n" << std::endl;
+    std::cout << "final" << std::endl;
+    std::cout << ray->o.x << " " << ray->o.y << " " << ray->o.z << std::endl;
+    std::cout << ray->d.x << " " << ray->d.y << " " << ray->d.z << std::endl;
+    // ----
+    */
     
     ray->time = Lerp(sample.time, ShutterOpen, ShutterClose);
     CameraToWorld(*ray, ray);
