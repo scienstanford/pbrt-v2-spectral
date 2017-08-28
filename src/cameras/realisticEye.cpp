@@ -413,6 +413,7 @@ bool RealisticEyeCamera::IntersectLensElAspheric(const Ray &r, float *tHit, Lens
     status = gsl_root_fsolver_set (s, &F, x_lo, x_hi);
     if(status != 0){
         // Ray probably does not intersect. This might depend on the x_hi set above, i.e. if it's too small OR too large. TODO: Can we check this?
+       gsl_root_fsolver_free (s);
         return false;
     }
     
