@@ -80,6 +80,9 @@ void SpectralRendererTask::Run() {
     Spectrum *Ts = new Spectrum[maxSamples];
     Intersection *isects = new Intersection[maxSamples];
     
+    // Calculate corresponding index positions on sampled spectrum (e.g. if nSpectralSamples = 32 and nWaveBands = 3, we want [1 to 11, 12 to 22, 23 to 32].
+    int deltaIndex = round(nSpectralSamples/nWaveBands);
+    
     // Get samples from _Sampler_ and update image
     int sampleCount;
     while ((sampleCount = sampler->GetMoreSamples(samples, rng)) > 0) {
@@ -92,12 +95,15 @@ void SpectralRendererTask::Run() {
             
             // TODO: For speedup purposes, we don't actually have to trace a new ray for every single spectral sample, we can also pick a few wavelength bands and trace rays for those, and then return the values associated with the band. For example, trace a new ray for 400-450 nm, and then assign the returned spectrum from 400 to 450 nm to the final radiance at the pixel.
             
-            for(int s = 0; s < nSpectralSamples; s++){
+            // Divide spectrum into the number of desired samples. For every camera ray, we shoot [nWaveBands] rays in order to capture chromatic aberration.
+            for(int s = 0; s < nWaveBands; s++){
                 
                 Spectrum Ls_thisRay; // Returned radiance for an individual wavelength-ray
                 
                 // Assign a wavelength for this ray
-                rays[i].wavelength = sampledLambdaStart + (sampledLambdaEnd-sampledLambdaStart)/nSpectralSamples * s;
+                float deltaWave = (sampledLambdaEnd-sampledLambdaStart)/nWaveBands;
+                rays[i].wavelength = sampledLambdaStart + deltaWave * s + (deltaWave/2); // Sample middle of delta spectrum
+                //std::cout << "Sampled wavelength =  " << rays[i].wavelength << std::endl;
                 
                 // Find camera ray for _sample[i]_
                 PBRT_STARTED_GENERATING_CAMERA_RAY(&samples[i]);
@@ -152,7 +158,14 @@ void SpectralRendererTask::Run() {
                 // Note, having more nSpectralSamples doesn't really affect the speed of the rendering in the rest of the pipeline, but it does affect it here because we're rendering nSpectralSamples rays per wavelength. We don't really have to worry about the speed cost of calculating the entire spectrum for each of these wavelength-dependent rays and extracting the right value (as we do below) - this calculation should be neglible speed-wise.
                 float Ls_lambda;
                 Ls_thisRay.GetValueAtWavelength(rays[i].wavelength, &Ls_lambda);
-                Ls[i].AssignValueAtIndex(s, Ls_lambda);
+                
+                // Assign the result to all wavelengths sampled around the target wavelength. For example, if nWaveBands = 3, then we would split the spectrum into three equal parts and assign the result from the first wavelength to the first third, the second wavelength to the second third, etc.
+                int bottomIndex = deltaIndex*s;
+                int topIndex = min(deltaIndex*(s+1),nSpectralSamples-1);
+                //std::cout << "Bottom index = " << bottomIndex << " | " << "Top Index = " << topIndex << std::endl;
+                for(int waveIndex = bottomIndex; waveIndex < topIndex; waveIndex++){
+                    Ls[i].AssignValueAtIndex(waveIndex, Ls_lambda);
+                }
                 
             }
             PBRT_FINISHED_CAMERA_RAY_INTEGRATION(&rays[i], &samples[i], &Ls[i]);
@@ -191,12 +204,13 @@ void SpectralRendererTask::Run() {
 // SpectralRenderer Method Definitions
 SpectralRenderer::SpectralRenderer(Sampler *s, Camera *c,
                                    SurfaceIntegrator *si, VolumeIntegrator *vi,
-                                   bool visIds) {
+                                   bool visIds,int numWave) {
     sampler = s;
     camera = c;
     surfaceIntegrator = si;
     volumeIntegrator = vi;
     visualizeObjectIds = visIds;
+    nWaveBands = numWave;
 }
 
 
@@ -232,7 +246,7 @@ void SpectralRenderer::Render(const Scene *scene) {
         renderTasks.push_back(new SpectralRendererTask(scene, this, camera,
                                                        reporter, sampler, sample,
                                                        visualizeObjectIds,
-                                                       nTasks-1-i, nTasks));
+                                                       nTasks-1-i, nTasks,nWaveBands));
     EnqueueTasks(renderTasks);
     WaitForAllTasks();
     for (uint32_t i = 0; i < renderTasks.size(); ++i)

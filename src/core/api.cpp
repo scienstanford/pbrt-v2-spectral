@@ -1373,6 +1373,8 @@ Renderer *RenderOptions::MakeRenderer() const {
         
         bool visIds = RendererParams.FindOneBool("visualizeobjectids", false);
         string camerasFile = RendererParams.FindOneString("cameraTransforms", "");
+        int nWaveBands = RendererParams.FindOneInt("nWaveBands", 32); // How many wavelengths to sample, this is a tradeoff between speed and accuracy of chromatic aberration.
+        
         RendererParams.ReportUnused();
         
         Sampler *sampler = MakeSampler(SamplerName, SamplerParams, camera->film, camera);
@@ -1389,9 +1391,9 @@ Renderer *RenderOptions::MakeRenderer() const {
         
         // We have to put the spectral renderer here because it needs the samplers above, much like SamplerRenderer
         if(RendererName == "spectralrenderer"){
-            Warning("Rendering with spectral renderer. Rendering time will be slow!");
+            Warning("Rendering with spectral renderer at %d samples. Rendering will be %d times will be slow!",nWaveBands,nWaveBands);
             renderer = new SpectralRenderer(sampler, camera, surfaceIntegrator,
-                                            volumeIntegrator, visIds);
+                                            volumeIntegrator, visIds,nWaveBands);
         }
         else if(RendererName == "cameras"){
             renderer = new CamerasRenderer(sampler, camera, surfaceIntegrator,
