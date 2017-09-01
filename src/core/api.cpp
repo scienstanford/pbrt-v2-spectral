@@ -1373,13 +1373,15 @@ Renderer *RenderOptions::MakeRenderer() const {
         
         bool visIds = RendererParams.FindOneBool("visualizeobjectids", false);
         string camerasFile = RendererParams.FindOneString("cameraTransforms", "");
+        
+        // For spectral renderer (TL)
         int nWaveBands = RendererParams.FindOneInt("nWaveBands", 32); // How many wavelengths to sample, this is a tradeoff between speed and accuracy of chromatic aberration.
+        string samplingMethod = RendererParams.FindOneString("samplingMethod", "singleDirection"); // Whether we should shoot all rays across the spectrum in the same direction, or to randomize their direction based on the sampler.
         
         RendererParams.ReportUnused();
         
         Sampler *sampler = MakeSampler(SamplerName, SamplerParams, camera->film, camera);
         if (!sampler) Severe("Unable to create sampler.");
-        
         
         // Create surface and volume integrators
         SurfaceIntegrator *surfaceIntegrator = MakeSurfaceIntegrator(SurfIntegratorName,
@@ -1391,9 +1393,14 @@ Renderer *RenderOptions::MakeRenderer() const {
         
         // We have to put the spectral renderer here because it needs the samplers above, much like SamplerRenderer
         if(RendererName == "spectralrenderer"){
-            Warning("Rendering with spectral renderer at %d samples. Rendering will be %d times will be slow!",nWaveBands,nWaveBands);
+            Warning("Rendering with spectral renderer at %d samples.",nWaveBands);
+            if(samplingMethod == "singleDirection"){
+                Warning("Using single direction spectral rendering. For every pixel sample we will trace %d more rays. Rendering will be %d slower.",nWaveBands,nWaveBands);
+            }else if(samplingMethod == "samplerDirection"){
+                Warning("Using sampler direction spectral rendering. For every pixel sample we will assign a different wavelength and cycle through the wavelengths.");
+            }
             renderer = new SpectralRenderer(sampler, camera, surfaceIntegrator,
-                                            volumeIntegrator, visIds,nWaveBands);
+                                            volumeIntegrator, visIds,nWaveBands,samplingMethod);
         }
         else if(RendererName == "cameras"){
             renderer = new CamerasRenderer(sampler, camera, surfaceIntegrator,

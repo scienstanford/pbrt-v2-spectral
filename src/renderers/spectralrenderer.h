@@ -40,7 +40,7 @@ class SpectralRenderer : public Renderer {
 public:
     // SpectralRenderer Public Methods
     SpectralRenderer(Sampler *s, Camera *c, SurfaceIntegrator *si,
-                    VolumeIntegrator *vi, bool visIds, int numWaves);
+                    VolumeIntegrator *vi, bool visIds, int numWaves, string sampMeth);
     ~SpectralRenderer();
     void Render(const Scene *scene);
     Spectrum Li(const Scene *scene, const RayDifferential &ray,
@@ -56,6 +56,7 @@ private:
     SurfaceIntegrator *surfaceIntegrator;
     VolumeIntegrator *volumeIntegrator;
     int nWaveBands;
+    string samplingMethod;
 };
 
 
@@ -66,12 +67,12 @@ public:
     // SpectralRendererTask Public Methods
     SpectralRendererTask(const Scene *sc, Renderer *ren, Camera *c,
                         ProgressReporter &pr, Sampler *ms, Sample *sam, 
-                        bool visIds, int tn, int tc, int numWave)
+                        bool visIds, int tn, int tc, int numWaves, string sampMeth)
       : reporter(pr)
     {
         scene = sc; renderer = ren; camera = c; mainSampler = ms;
         origSample = sam; visualizeObjectIds = visIds; taskNum = tn; taskCount = tc;
-        nWaveBands = numWave;
+        nWaveBands = numWaves; samplingMethod = sampMeth;
     }
     void Run();
 private:
@@ -85,6 +86,7 @@ private:
     bool visualizeObjectIds;
     int taskNum, taskCount;
     int nWaveBands;
+    string samplingMethod;
 };
 
 

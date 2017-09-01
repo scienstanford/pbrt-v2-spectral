@@ -68,11 +68,26 @@ void SpectralRendererTask::Run() {
         return;
     }
     
+    // --------------
+    
+    // Depending on the sampling method for the spectral renderer, we specify a different number of samples. For the single direction method, we take every ray and shoot it nWaveBands different times, with each ray assigned a different wavelength. For the samplerDirection method, we generate nWaveBands times more rays from the sampler and assign each ray a different wavelength. The latter method should produce less noise but may produce less detailed aberrations.
+    int methodMultiplier; // This multiplier is for the inner loop.
+    if(samplingMethod == "singleDirection"){
+        methodMultiplier = nWaveBands;
+    }else if(samplingMethod == "samplerDirection"){
+        methodMultiplier = 1;
+    }else{
+        Error("Unrecognized spectral sampling method.");
+    }
+    
+    // --------------
+    
+    
     // Declare local variables used for rendering loop
     MemoryArena arena;
     RNG rng(taskNum);
     
-    // Allocate space for samples and intersections
+    // Allocate space for   samples and intersections
     int maxSamples = sampler->MaximumSampleCount();
     Sample *samples = origSample->Duplicate(maxSamples);
     RayDifferential *rays = new RayDifferential[maxSamples];
@@ -80,30 +95,33 @@ void SpectralRendererTask::Run() {
     Spectrum *Ts = new Spectrum[maxSamples];
     Intersection *isects = new Intersection[maxSamples];
     
-    // Calculate corresponding index positions on sampled spectrum (e.g. if nSpectralSamples = 32 and nWaveBands = 3, we want [1 to 11, 12 to 22, 23 to 32].
+    // Calculate corresponding index positions on sampled spectrum (e.g. if nSpectralSamples = 32 and nWaveBands = 3, we want to divide the indices into (1 to 11), (12 to 22), and (23 to 32.) This delta index defines the spacing.)
     int deltaIndex = round(nSpectralSamples/nWaveBands);
+    float deltaWave = (sampledLambdaEnd-sampledLambdaStart)/nWaveBands;
     
     // Get samples from _Sampler_ and update image
     int sampleCount;
+    
     while ((sampleCount = sampler->GetMoreSamples(samples, rng)) > 0) {
+        
         // Generate camera rays and compute radiance along rays
         for (int i = 0; i < sampleCount; ++i) {
+        
             
-            // For each sample, we loop through all the wavelength bands and trace a new ray per wavelength. We then put all the returned values in a spectrum for the original sample. (TL)
+            // For each sample, we loop through  all the wavelength bands and trace a new ray per wavelength. We then put all the returned values in a spectrum for the original sample. (TL)
             
             // This method is slighty different from what Andy did. The advantage of this method is that when a user specifies a certain number of ray samples, that's the exact number of main rays (in a wavelength "bundle") that will be generated. In other words, there won't be the issue of having a blue image because you did not specify enough rays. The disadvantage is that in general we need more rays, since a bundle of rays with different wavelengths are all sent in the same direction and don't split until they hit the lens. In Andy's old method, each ray with its own wavelength will be shot at a different direction. In the future let's think about which way is better.
             
-            // TODO: For speedup purposes, we don't actually have to trace a new ray for every single spectral sample, we can also pick a few wavelength bands and trace rays for those, and then return the values associated with the band. For example, trace a new ray for 400-450 nm, and then assign the returned spectrum from 400 to 450 nm to the final radiance at the pixel.
-            
             // Divide spectrum into the number of desired samples. For every camera ray, we shoot [nWaveBands] rays in order to capture chromatic aberration.
-            for(int s = 0; s < nWaveBands; s++){
+            for(int s = 0; s < methodMultiplier; s++){
                 
                 Spectrum Ls_thisRay; // Returned radiance for an individual wavelength-ray
                 
                 // Assign a wavelength for this ray
-                float deltaWave = (sampledLambdaEnd-sampledLambdaStart)/nWaveBands;
-                rays[i].wavelength = sampledLambdaStart + deltaWave * s + (deltaWave/2); // Sample middle of delta spectrum
-                //std::cout << "Sampled wavelength =  " << rays[i].wavelength << std::endl;
+                if(samplingMethod == "samplerDirection"){
+                    s = i % nWaveBands;
+                }
+                rays[i].wavelength = sampledLambdaStart + deltaWave * s + (deltaWave/2); // Use middle wavelength of the spectrum band
                 
                 // Find camera ray for _sample[i]_
                 PBRT_STARTED_GENERATING_CAMERA_RAY(&samples[i]);
@@ -154,6 +172,8 @@ void SpectralRendererTask::Run() {
                     }
                 }
                 
+                
+                
                 // Place the returned radiance for this wavelength into the total spectrum
                 // Note, having more nSpectralSamples doesn't really affect the speed of the rendering in the rest of the pipeline, but it does affect it here because we're rendering nSpectralSamples rays per wavelength. We don't really have to worry about the speed cost of calculating the entire spectrum for each of these wavelength-dependent rays and extracting the right value (as we do below) - this calculation should be neglible speed-wise.
                 float Ls_lambda;
@@ -168,6 +188,8 @@ void SpectralRendererTask::Run() {
                 }
                 
             }
+            
+            
             PBRT_FINISHED_CAMERA_RAY_INTEGRATION(&rays[i], &samples[i], &Ls[i]);
         }
         
@@ -185,6 +207,7 @@ void SpectralRendererTask::Run() {
         // Free _MemoryArena_ memory from computing image sample values
         arena.FreeAll();
     }
+    
     
     // Clean up after _SpectralRendererTask_ is done with its image region
     camera->film->UpdateDisplay(sampler->xPixelStart,
@@ -204,13 +227,14 @@ void SpectralRendererTask::Run() {
 // SpectralRenderer Method Definitions
 SpectralRenderer::SpectralRenderer(Sampler *s, Camera *c,
                                    SurfaceIntegrator *si, VolumeIntegrator *vi,
-                                   bool visIds,int numWave) {
+                                   bool visIds,int numWave, string sampMeth) {
     sampler = s;
     camera = c;
     surfaceIntegrator = si;
     volumeIntegrator = vi;
     visualizeObjectIds = visIds;
     nWaveBands = numWave;
+    samplingMethod = sampMeth;
 }
 
 
@@ -246,7 +270,8 @@ void SpectralRenderer::Render(const Scene *scene) {
         renderTasks.push_back(new SpectralRendererTask(scene, this, camera,
                                                        reporter, sampler, sample,
                                                        visualizeObjectIds,
-                                                       nTasks-1-i, nTasks,nWaveBands));
+                                                       nTasks-1-i, nTasks,nWaveBands,
+                                                       samplingMethod));
     EnqueueTasks(renderTasks);
     WaitForAllTasks();
     for (uint32_t i = 0; i < renderTasks.size(); ++i)
