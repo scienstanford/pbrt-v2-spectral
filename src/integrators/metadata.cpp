@@ -55,7 +55,7 @@ Spectrum MetadataIntegrator::Li(const Scene *scene,
         {
             
             Point intersectPoint = isect.dg.p;
-            Point rayOrigin = Point(0,0,0);
+            Point rayOrigin = ray.o;
             Vector toIntersect = intersectPoint - rayOrigin;
             float distance = sqrt(toIntersect[0]*toIntersect[0] + toIntersect[1]*toIntersect[1] + toIntersect[2]*toIntersect[2]);
             L = Spectrum(distance);
