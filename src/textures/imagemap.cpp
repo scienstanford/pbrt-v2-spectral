@@ -30,10 +30,10 @@
 // ImageTexture Method Definitions
 template <typename Tmemory, typename Treturn>
 ImageTexture<Tmemory, Treturn>::ImageTexture(TextureMapping2D *m,
-        const string &filename, bool doTrilinear, float maxAniso,
+        const string &filename, bool doTrilinear, bool noFiltering, float maxAniso,
         ImageWrap wrapMode, float scale, float gamma) {
     mapping = m;
-    mipmap = GetTexture(filename, doTrilinear, maxAniso,
+    mipmap = GetTexture(filename, doTrilinear, noFiltering, maxAniso,
                         wrapMode, scale, gamma);
 }
 
@@ -46,7 +46,7 @@ template <typename Tmemory, typename Treturn>
 
 template <typename Tmemory, typename Treturn> MIPMap<Tmemory> *
 ImageTexture<Tmemory, Treturn>::GetTexture(const string &filename,
-        bool doTrilinear, float maxAniso, ImageWrap wrap,
+        bool doTrilinear, bool noFiltering, float maxAniso, ImageWrap wrap,
         float scale, float gamma) {
     // Look for texture in texture cache
     TexInfo texInfo(filename, doTrilinear, maxAniso, wrap, scale, gamma);
@@ -60,7 +60,7 @@ ImageTexture<Tmemory, Treturn>::GetTexture(const string &filename,
         Tmemory *convertedTexels = new Tmemory[width*height];
         for (int i = 0; i < width*height; ++i)
             convertIn(texels[i], &convertedTexels[i], scale, gamma);
-        ret = new MIPMap<Tmemory>(width, height, convertedTexels, doTrilinear,
+        ret = new MIPMap<Tmemory>(width, height, convertedTexels, doTrilinear,noFiltering,
                                   maxAniso, wrap);
         delete[] texels;
         delete[] convertedTexels;
@@ -129,6 +129,7 @@ ImageTexture<float, float> *CreateImageFloatTexture(const Transform &tex2world,
     // Initialize _ImageTexture_ parameters
     float maxAniso = tp.FindFloat("maxanisotropy", 8.f);
     bool trilerp = tp.FindBool("trilinear", false);
+    bool noFiltering = tp.FindBool("noFiltering", false); // Added by Trisha
     string wrap = tp.FindString("wrap", "repeat");
     ImageWrap wrapMode = TEXTURE_REPEAT;
     if (wrap == "black") wrapMode = TEXTURE_BLACK;
@@ -136,7 +137,7 @@ ImageTexture<float, float> *CreateImageFloatTexture(const Transform &tex2world,
     float scale = tp.FindFloat("scale", 1.f);
     float gamma = tp.FindFloat("gamma", 1.f);
     return new ImageTexture<float, float>(map, tp.FindFilename("filename"),
-        trilerp, maxAniso, wrapMode, scale, gamma);
+        trilerp, noFiltering, maxAniso, wrapMode, scale, gamma);
 }
 
 
@@ -167,6 +168,7 @@ ImageTexture<RGBSpectrum, Spectrum> *CreateImageSpectrumTexture(const Transform 
     // Initialize _ImageTexture_ parameters
     float maxAniso = tp.FindFloat("maxanisotropy", 8.f);
     bool trilerp = tp.FindBool("trilinear", false);
+    bool noFiltering = tp.FindBool("noFiltering", false); // Added by Trisha
     string wrap = tp.FindString("wrap", "repeat");
     ImageWrap wrapMode = TEXTURE_REPEAT;
     if (wrap == "black") wrapMode = TEXTURE_BLACK;
@@ -174,7 +176,7 @@ ImageTexture<RGBSpectrum, Spectrum> *CreateImageSpectrumTexture(const Transform 
     float scale = tp.FindFloat("scale", 1.f);
     float gamma = tp.FindFloat("gamma", 1.f);
     return new ImageTexture<RGBSpectrum, Spectrum>(map, tp.FindFilename("filename"),
-        trilerp, maxAniso, wrapMode, scale, gamma);
+        trilerp, noFiltering, maxAniso, wrapMode, scale, gamma);
 }
 
 

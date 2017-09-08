@@ -43,7 +43,7 @@ template <typename T> class MIPMap {
 public:
     // MIPMap Public Methods
     MIPMap() { pyramid = NULL; width = height = nLevels = 0; }
-    MIPMap(uint32_t xres, uint32_t yres, const T *data, bool doTri = false,
+    MIPMap(uint32_t xres, uint32_t yres, const T *data, bool doTri = false, bool noFilt = false,
            float maxAniso = 8.f, ImageWrap wrapMode = TEXTURE_REPEAT);
     ~MIPMap();
     uint32_t Width() const { return width; }
@@ -85,6 +85,7 @@ private:
 
     // MIPMap Private Data
     bool doTrilinear;
+    bool noFiltering;
     float maxAnisotropy;
     ImageWrap wrapMode;
     struct ResampleWeight {
@@ -101,9 +102,10 @@ private:
 
 // MIPMap Method Definitions
 template <typename T>
-MIPMap<T>::MIPMap(uint32_t sres, uint32_t tres, const T *img, bool doTri,
+MIPMap<T>::MIPMap(uint32_t sres, uint32_t tres, const T *img, bool doTri, bool noFilt,
                   float maxAniso, ImageWrap wm) {
     doTrilinear = doTri;
+    noFiltering = noFilt;
     maxAnisotropy = maxAniso;
     wrapMode = wm;
     T *resampledImage = NULL;
@@ -229,6 +231,17 @@ MIPMap<T>::~MIPMap() {
 
 template <typename T>
 T MIPMap<T>::Lookup(float s, float t, float width) const {
+    
+    // Trisha:
+    // If we ask for no filtering, just return the value at (s,t)
+    // We choose the lowest level, since that is just the original image.
+    if(noFiltering){
+        s = s * pyramid[0]->uSize() - 0.5f;
+        t = t * pyramid[0]->vSize() - 0.5f;
+        int s0 = Round2Int(s), t0 = Round2Int(t);
+        return Texel(0, s0, t0);
+    }
+    
     // Compute MIPMap level for trilinear filtering
     float level = nLevels - 1 + Log2(max(width, 1e-8f));
 
@@ -264,7 +277,7 @@ T MIPMap<T>::triangle(uint32_t level, float s, float t) const {
 template <typename T>
 T MIPMap<T>::Lookup(float s, float t, float ds0, float dt0,
                     float ds1, float dt1) const {
-    if (doTrilinear) {
+    if (doTrilinear || noFiltering) {
         PBRT_STARTED_TRILINEAR_TEXTURE_LOOKUP(s, t);
         T val = Lookup(s, t,
                        2.f * max(max(fabsf(ds0), fabsf(dt0)),

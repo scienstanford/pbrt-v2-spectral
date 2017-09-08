@@ -61,7 +61,7 @@ template <typename Tmemory, typename Treturn>
     class ImageTexture : public Texture<Treturn> {
 public:
     // ImageTexture Public Methods
-    ImageTexture(TextureMapping2D *m, const string &filename, bool doTri,
+    ImageTexture(TextureMapping2D *m, const string &filename, bool doTri, bool noFilt,
                  float maxAniso, ImageWrap wm, float scale, float gamma);
     Treturn Evaluate(const DifferentialGeometry &) const;
     RGBSpectrum EvaluateMemory(const DifferentialGeometry &) const;
@@ -78,7 +78,7 @@ public:
 private:
     // ImageTexture Private Methods
     static MIPMap<Tmemory> *GetTexture(const string &filename,
-        bool doTrilinear, float maxAniso, ImageWrap wm, float scale, float gamma);
+        bool doTrilinear, bool noFiltering, float maxAniso, ImageWrap wm, float scale, float gamma);
     static void convertIn(const RGBSpectrum &from, RGBSpectrum *to,
                           float scale, float gamma) {
         *to = Pow(scale * from, gamma);
