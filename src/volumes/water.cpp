@@ -113,8 +113,8 @@ Spectrum WaterVolumeDensity::p(const Point &p, const Vector &wi, const Vector &w
 WaterVolumeDensity *CreateWaterVolumeDensity(const Transform &volume2world,
                                              const ParamSet &params) {
     
-    Spectrum absorption = params.FindOneSpectrum("absorptionCurveFile", 0.f); // mm^-1
-    Spectrum scattering = params.FindOneSpectrum("scatteringCurveFile", 0.f); // mm^-1
+    Spectrum absorption = params.FindOneSpectrum("absorptionCurveFile", 0.f); // m^-1
+    Spectrum scattering = params.FindOneSpectrum("scatteringCurveFile", 0.f); // m^-1
     string phaseFile = params.FindOneString("phaseFunctionFile",""); // sr^-1
     
     Point p0 = params.FindOnePoint("p0", Point(0,0,0));
