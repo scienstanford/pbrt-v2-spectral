@@ -124,18 +124,14 @@ RealisticEyeCamera *CreateRealisticEyeCamera(const ParamSet &params,
 
     // Specify which material index corresponds to the GRIN lens. If nothing is specified (grinSurfaceIndex == -1) we assume that a normal lens is used instead of a GRIN lens
     int grinSurfaceIndex = params.FindOneInt("grinMaterialIndex", -1);
-    string grinSurfaceFile = params.FindOneString("GRINfile", "");
-    
-    // Flags for realism/speed
-    bool chromaticFlag = params.FindOneBool("chromaticAberrationEnabled", 0.0);
+    string grinType = params.FindOneString("grinType", "polans");
+    float deltaT = params.FindOneFloat("deltaT", 3.562);
     
     // Flags for convention
     bool flipRadFlag = params.FindOneBool("flipLensRadius", 0.0);
     
-    return new RealisticEyeCamera(cam2world,film,hither,yon,shutteropen,shutterclose,specfile,pupDiam,lensDecenterX,lensDecenterY,lensTiltX,lensTiltY,retinaDistance,retinaRadius,retinaSemiDiam,chromaticFlag,flipRadFlag,iorSpectra,grinSurfaceIndex,grinSurfaceFile);
+    return new RealisticEyeCamera(cam2world,film,hither,yon,shutteropen,shutterclose,specfile,pupDiam,lensDecenterX,lensDecenterY,lensTiltX,lensTiltY,retinaDistance,retinaRadius,retinaSemiDiam,flipRadFlag,iorSpectra,grinSurfaceIndex,grinType,deltaT);
 }
-
-
 
 
 RealisticEyeCamera::RealisticEyeCamera(const AnimatedTransform &cam2world,
@@ -151,17 +147,16 @@ RealisticEyeCamera::RealisticEyeCamera(const AnimatedTransform &cam2world,
                                        float rD,
                                        float rR,
                                        float rSD,
-                                       bool chromaticFlag,
                                        bool flipRadFlag,
                                        vector<Spectrum> iorS,
                                        int gSI,
-                                       string grinFile)
+                                       string gT,
+                                       float dT)
 : Camera(cam2world, sopen, sclose, f), ShutterOpen(sopen), ShutterClose(sclose),film(f)
 {
     
     // Find the complete path for the specfile
     string lensFileName = AbsolutePath(ResolveFilename(specfile));
-    string grinFileName = AbsolutePath(ResolveFilename(grinFile));
     
     pupilDiameter = pupDiam;
     lensDecenterX = ldX;
@@ -172,10 +167,14 @@ RealisticEyeCamera::RealisticEyeCamera(const AnimatedTransform &cam2world,
     retinaRadius = rR;
     retinaSemiDiam = rSD;
     iorSpectra = iorS;
+    
+    // GRIN info
     grinSurfaceIndex = gSI;
+    grinType = gT;
+    deltaT = dT;
     if(grinSurfaceIndex != -1) grinLensFlag = true;
     
-    chromaticAberrationEnabled = chromaticFlag;
+    // Flags
     flipLensRadius = flipRadFlag;
     
     // -------------------------
@@ -230,10 +229,6 @@ RealisticEyeCamera::RealisticEyeCamera(const AnimatedTransform &cam2world,
             // TODO: This check is sort of hack-y, is there a better mathematical way to do this?
             float smallerR = min(currentLensEl.radiusX,currentLensEl .radiusY);
             float biggerK = max(currentLensEl.conicConstantX,currentLensEl.conicConstantY);
-//            if((currentLensEl.semiDiameter*currentLensEl.semiDiameter) >= (smallerR*smallerR/(1+biggerK))){
-//                Warning("Changing semidiameter of an element to match radius/asphericity geometry.");
-//                currentLensEl.semiDiameter = 0.95 * sqrt((smallerR*smallerR/(1+biggerK))); // 0.95 is to add some buffer zone, since rays act very strangely when they get too close to the edge of the conical surface.
-//            }
             if(currentLensEl.semiDiameter*currentLensEl.semiDiameter*(1+biggerK)/(smallerR*smallerR) > 1.0f ){
                 currentLensEl.semiDiameter = 0.95 * sqrt((smallerR*smallerR/(1+biggerK))); // 0.95 is to add some buffer zone, since rays act very strangely when they get too close to the edge of the conical surface.
             }
@@ -247,11 +242,11 @@ RealisticEyeCamera::RealisticEyeCamera(const AnimatedTransform &cam2world,
     if(lensEls[lensEls.size()-1].thickness != 0){
         Error("Thickness of lens element closest to zero must be zero. Define thickness in 'retinaDistance' parameter instead.");
     }
-    // ---------------------------
-    // --- Read in GRIN file ---
-    // ---------------------------
     
-    // TODO: DOUBLE CHECK THAT THIS IS WORKING
+    // ---------------------------
+    // --- Set GRIN parameters ---
+    // ---------------------------
+    // TODO: Delete this for clean up
     
     /* The GRIN file described the GRIN lens used. It follows the same format as Zemax, specifically:
      
@@ -275,7 +270,7 @@ RealisticEyeCamera::RealisticEyeCamera(const AnimatedTransform &cam2world,
      
      Wavelength should be in um. Total number of values should be K_MAX*3 + L_MAX*3 + 3
      
-     */
+     
     
     
     if(grinSurfaceIndex != -1){
@@ -301,16 +296,24 @@ RealisticEyeCamera::RealisticEyeCamera(const AnimatedTransform &cam2world,
         grin.K1 = 0; grin.K2 = 0; grin.K3 = 0;
         grin.L1 = 0; grin.L2 = 0; grin.L3 = 0;
         for(int i = 0; i < K_max; i++){
+            
             float wavePow = pow(refWavelength,(i+1)-1);
+            
             grin.K1 += vals[5+i]*wavePow;
             grin.K2 += vals[5+K_max+i]*wavePow;
             grin.K3 += vals[5+2*K_max+i]*wavePow;
+            
+            grin.L1 += vals[5+i]*wavePow;
+            grin.L2 += vals[5+K_max+i]*wavePow;
+            grin.L3 += vals[5+2*K_max+i]*wavePow;
+            
         }
         
-
+     
         
         
     }
+    */
     
     // To calculate the "film diagonal", we use the retina semi-diameter. The film diagonal is the diagonal of the rectangular image rendered out by PBRT, in real units. Since we restrict samples to a circular image, we can calculate the film diagonal to be the same as a square that circumscribes the circular image.
     filmDiag = retinaSemiDiam*1.4142*2; // sqrt(2)*2
@@ -640,12 +643,13 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
         float xc,yc,zc, rcoselev;
         xc = -1*retinaRadius*sin(el); // TODO: Confirm this flip?
         rcoselev = retinaRadius*cos(el);
-        zc = -1*(rcoselev*cos(az)); // The -1 is to account for the curavure described above in the diagram
+        zc = -1*(rcoselev*cos(az)); // The -1 is to account for the curvature described above in the diagram
         yc = -1*rcoselev*sin(az); // TODO: Confirm this flip?
         
         zc = zc + -1*retinaDistance + retinaRadius; // Move the z coordinate out to correct retina distance
         
         startingPoint = Point(xc,yc,zc);
+        //std::cout << startingPoint.x << " " << startingPoint.y << " " << startingPoint.z << std::endl;
         
     }
     
@@ -684,10 +688,11 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
     ray->o = startingPoint;
     ray->d = Normalize(pointOnLens - ray->o);
     ray->wavelength = 550;
+     
     
     // Retina to scene
     startingPoint = Point(0,0,-16.3200);
-    pointOnLens = Point(0,1.5330684279,0.2229);
+    pointOnLens = Point(0,1.5294,0.2084);
     ray->o = startingPoint;
     ray->d = Normalize(pointOnLens - ray->o);
     ray->wavelength = 550;
@@ -717,7 +722,7 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
         std::cout << "i = " << i << std::endl;
         std::cout << "start " << ray->o.x << " " << ray->o.y << " " << ray->o.z << std::endl;
         std::cout << "dir " << ray->d.x << " " << ray->d.y << " " << ray->d.z << std::endl;
-         */
+        */
         // ----
         
         float tHit = 0;
@@ -798,11 +803,6 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
                 //                 lens
                 //
                 
-                // To trace wavelength by wavelength through the lens, the spectral renderer must be selected. If it's not, let's warn the user.
-                if(chromaticAberrationEnabled && ray->wavelength == 0){
-                    Error("Chromatic aberration enabled but the ray has no wavelength. Are you using the spectral renderer?");
-                }
-                
                 // The user can load IOR spectra for each ocular medium into ior1, ior2, etc. In the lens file, they can then specify with medium they would like to use. The number (X) corresponds to iorX.
                 
                 float n1,n2;
@@ -853,14 +853,16 @@ float RealisticEyeCamera::GenerateRay(const CameraSample &sample, Ray *ray) cons
     ray->o = startingPoint;
     
     // DEBUG
-    /*
+    
     // ----
+    /*
     std::cout << "\n" << std::endl;
     std::cout << "final" << std::endl;
     std::cout << ray->o.x << " " << ray->o.y << " " << ray->o.z << std::endl;
     std::cout << ray->d.x << " " << ray->d.y << " " << ray->d.z << std::endl;
+     */
     // ----
-    */
+    
     
     ray->time = Lerp(sample.time, ShutterOpen, ShutterClose);
     CameraToWorld(*ray, ray);
@@ -903,7 +905,8 @@ float RealisticEyeCamera::lookUpIOR(int mediumIndex, const Ray &ray)const{
         
     }else{
         // Standard media
-        if(chromaticAberrationEnabled){
+        // If spectral renderer is used, then ray.wavelength will be given a value. Otherwise, it will be zero.
+        if(ray.wavelength != 0){
             iorSpectra[mediumIndex-1].GetValueAtWavelength(ray.wavelength,&n);
         }else{
             iorSpectra[mediumIndex-1].GetValueAtWavelength(550,&n);

@@ -1395,7 +1395,7 @@ Renderer *RenderOptions::MakeRenderer() const {
         if(RendererName == "spectralrenderer"){
             Warning("Rendering with spectral renderer at %d samples.",nWaveBands);
             if(samplingMethod == "singleDirection"){
-                Warning("Using single direction spectral rendering. For every pixel sample we will trace %d more rays. Rendering will be %d slower.",nWaveBands,nWaveBands);
+                Warning("Using single direction spectral rendering. For every pixel sample we will trace %dx more rays. Rendering will be %d times slower.",nWaveBands,nWaveBands);
             }else if(samplingMethod == "samplerDirection"){
                 Warning("Using sampler direction spectral rendering. For every pixel sample we will assign a different wavelength and cycle through the wavelengths.");
             }

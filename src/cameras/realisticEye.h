@@ -23,10 +23,14 @@ struct LensElementEye{
 };
 
 struct GRINelement{
-//    float minWavelength, maxWavelength, refWavelength;
-//    int K_max, L_max;
-    float K1, K2, K3; // We precalculate these using the Sellmeier formula
-    float L1, L2, L3;
+    // These values are directly from the Polans paper. They've been hard coded here for simplicity sake, but in the future we could potentially read in a text file for the GRIN lens and do all the computation within PBRT.
+    float refWavelength = 550;
+    float K11 = -543.4493, K12 = 784.8531;
+    float K21 = 269.8803, K22 = -389.7629;
+    float K31 = 273.6147, K32 = -395.1561;
+    float L1 = -0.0010, L2 = 0.0000, L3 = -0.0020;
+    float N0 = 1.424, Nr2 = -1.278e-3, Nr4 = -2.121e-5;
+    float Nz1 = -0.045, Nz2 = 0.021, Nz3 = -5.651e-3, Nz4 = 8.658e-4;
     
 };
 
@@ -56,11 +60,11 @@ public:
                        float retinaDistance,
                        float retinaRadius,
                        float retinaSemiDiam,
-                       bool chromaticFlag,
                        bool flipRad,
                        vector<Spectrum> iorSpectra,
                        int grinSurfaceIndex,
-                       string grinFile);
+                       string grinType,
+                       float deltaT);
     
     
     ~RealisticEyeCamera();
@@ -98,10 +102,19 @@ private:
     // GRIN lens
     bool grinLensFlag;
     int grinSurfaceIndex;
-    vector<float> wavelengths;
-    vector<float> radialSamples ;
-    vector<Spectrum> grinIORsamples;
-
+    string grinType;
+    float deltaT;
+    
+    // GRIN parameters
+    // These values are directly from the Polans paper. They've been hard coded here for simplicity sake, but in the future we could potentially read in a text file for the GRIN lens and do all the computation within PBRT.
+    float refWavelength = 550;
+    float K11 = -543.4493, K12 = 784.8531;
+    float K21 = 269.8803, K22 = -389.7629;
+    float K31 = 273.6147, K32 = -395.1561;
+    float L1 = -0.0010, L2 = 0.0000, L3 = -0.0020;
+    float N0 = 1.424, Nr2 = -1.278e-3, Nr4 = -2.121e-5;
+    float Nz1 = -0.045, Nz2 = 0.021, Nz3 = -5.651e-3, Nz4 = 8.658e-4;
+    
     // Flags for speed
     bool chromaticAberrationEnabled;
     bool IORforEyeEnabled;
